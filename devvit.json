@@ -1,0 +1,107 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "rulewiserr",
+  "post": {
+    "dir": "dist/client",
+    "entrypoints": {
+      "default": {
+        "inline": true,
+        "entry": "splash.html"
+      },
+      "game": {
+        "entry": "game.html"
+      },
+      "dashboard": {
+        "entry": "dashboard.html"
+      }
+    }
+  },
+  "server": {
+    "dir": "dist/server",
+    "entry": "index.cjs"
+  },
+  "menu": {
+    "items": [
+      {
+        "label": "Create RuleWiser Check Post",
+        "description": "Create the RuleWiser pre-check custom post",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/post-create"
+      },
+      {
+        "label": "Create RuleWiser Dashboard",
+        "description": "Create the RuleWiser moderator dashboard post",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/dashboard-create"
+      },
+      {
+        "label": "RuleWiser: Re-Analyze",
+        "description": "Re-run RuleWiser analysis on this post",
+        "location": "post",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/reanalyze-post"
+      },
+      {
+        "label": "Example form",
+        "description": "Show a simple form",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/example-form"
+      }
+    ]
+  },
+  "forms": {
+    "exampleForm": "/internal/form/example-submit"
+  },
+  "triggers": {
+    "onAppInstall": "/internal/triggers/on-app-install",
+    "onAppUpgrade": "/internal/triggers/on-app-install",
+    "onPostSubmit": "/internal/triggers/on-post-submit",
+    "onModAction": "/internal/triggers/on-mod-action"
+  },
+  "settings": {
+    "global": {
+      "geminiApiKey": {
+        "label": "Gemini API Key",
+        "type": "string",
+        "isSecret": true
+      }
+    },
+    "subreddit": {
+      "aiEnabled": {
+        "label": "Enable AI Analysis",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      "strictMode": {
+        "label": "Strict Mode (auto-remove violations)",
+        "type": "boolean",
+        "defaultValue": false
+      },
+      "violationThreshold": {
+        "label": "Violation Confidence Threshold (0-100)",
+        "type": "number",
+        "defaultValue": 70
+      },
+      "commentOnViolation": {
+        "label": "Post Warning Comment on Violations",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      "customContext": {
+        "label": "Additional Context for AI (subreddit culture notes)",
+        "type": "string",
+        "defaultValue": ""
+      }
+    }
+  },
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build"
+  },
+  "dev": {
+    "subreddit": "TestRuleWiser"
+  }
+}
