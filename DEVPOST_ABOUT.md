@@ -136,21 +136,21 @@ Moderators review signals in dashboard or menu actions
 
 ## Challenges
 
-### Building useful guidance without external AI calls
+### Giving helpful feedback quickly
 
-The original plan included external AI API analysis. During development, API access and rate limits made that path unreliable for a demo-ready Reddit app. The solution was to rebuild the analyzer as a local deterministic engine that still gives human-readable explanations, confidence scores, risk labels, and title suggestions.
+RuleWiser needs to respond fast while still giving users useful guidance. I focused on a local analysis flow that can explain scores, risks, and title suggestions right inside the Reddit app.
 
-### Avoiding generic responses
+### Making each result feel specific
 
-A useful moderation assistant cannot say the same thing for every post. The engine separates title problems, body-context problems, spam signals, promotion signals, civility issues, privacy risk, spoiler risk, off-topic risk, subreddit-specific rule patterns, and duplicate risk so each result feels specific to the submitted content.
+Different posts need different advice. RuleWiser checks title clarity, body context, duplicate topics, spam-like wording, and subreddit rules so the feedback matches the actual draft.
 
-### Keeping Devvit workflows fast
+### Keeping the dashboard clear
 
-Post-submit checks need to finish quickly. RuleWiser keeps analysis lightweight by saving only the small pieces of context needed for scores, warnings, and dashboard trends.
+Moderators need a dashboard that feels real and easy to trust. RuleWiser saves the visible reason with each flagged post, avoids duplicate rows for the same post, and shows the main signal clearly.
 
-### Making the UI feel polished inside Reddit
+### Making the UI feel natural on Reddit
 
-Reddit owns the outer page, so the app experience has to feel good inside a custom post surface. React, Tailwind, and Framer Motion make the Pre-Check flow and Dashboard feel modern, responsive, and easy to understand.
+The Pre-Check and Dashboard both run inside Reddit, so the interface has to be simple, fast, and comfortable to use. The final UI uses clear cards, hover insights, and smooth motion to guide users without overwhelming them.
 
 ---
 
@@ -158,7 +158,7 @@ Reddit owns the outer page, so the app experience has to feel good inside a cust
 
 - How to build a Devvit Web app with custom posts, triggers, menu items, scheduler endpoints, app settings, and saved moderation signals.
 - How to design moderation tools for both users and moderators.
-- How to turn API limitations into a local-first architecture.
+- How to turn platform constraints into a local-first product experience.
 - How important clear explanations are when moderation feedback affects real users.
 
 ---
