@@ -3,7 +3,7 @@ import type { MenuItemRequest, T3, UiResponse } from '@devvit/web/shared';
 import { context, reddit, redis } from '@devvit/web/server';
 import { analyzePost } from '../analysis/engine';
 import { createDashboardPost, createPreCheckPost } from '../core/post';
-import { savePostData, saveViolation } from '../storage/redis';
+import { markFalsePositive, savePostData, saveViolation } from '../storage/redis';
 import { getRulewiserSettings } from '../storage/rules';
 
 export const menu = new Hono();
@@ -88,6 +88,38 @@ menu.post('/reanalyze-post', async (c) => {
     return c.json<UiResponse>(
       {
         showToast: 'RuleWiser re-analysis failed',
+      },
+      400
+    );
+  }
+});
+
+menu.post('/false-positive-post', async (c) => {
+  try {
+    const input = await c.req.json<MenuItemRequest>();
+
+    if (!isPostId(input.targetId)) {
+      return c.json<UiResponse>(
+        {
+          showToast: 'RuleWiser can only mark posts as false positives',
+        },
+        400
+      );
+    }
+
+    await markFalsePositive(redis, input.targetId);
+
+    return c.json<UiResponse>(
+      {
+        showToast: 'Marked as false positive. RuleWiser will learn from this.',
+      },
+      200
+    );
+  } catch (error) {
+    console.error(`Error marking false positive: ${error}`);
+    return c.json<UiResponse>(
+      {
+        showToast: 'Could not mark this post as false positive',
       },
       400
     );

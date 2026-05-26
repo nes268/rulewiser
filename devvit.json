@@ -37,11 +37,18 @@
         "endpoint": "/internal/menu/dashboard-create"
       },
       {
-        "label": "RuleWiser: Re-Analyze",
+        "label": "🔍 RuleWiser: Re-Analyze",
         "description": "Re-run RuleWiser analysis on this post",
         "location": "post",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/reanalyze-post"
+      },
+      {
+        "label": "✅ RuleWiser: Mark as False Positive",
+        "description": "Mark this post as a RuleWiser false positive",
+        "location": "post",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/false-positive-post"
       },
       {
         "label": "Example form",
@@ -54,6 +61,14 @@
   },
   "forms": {
     "exampleForm": "/internal/form/example-submit"
+  },
+  "scheduler": {
+    "tasks": {
+      "daily_analytics_rollup": {
+        "endpoint": "/internal/scheduler/daily-analytics-rollup",
+        "cron": "0 0 * * *"
+      }
+    }
   },
   "triggers": {
     "onAppInstall": "/internal/triggers/on-app-install",

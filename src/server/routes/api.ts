@@ -6,6 +6,7 @@ import {
 } from '../analysis/geminiAnalysis';
 import { scoreAnalysis } from '../analysis/scoring';
 import { checkTitleDeterministic } from '../analysis/titleCheck';
+import { calculateHealthScore } from '../storage/analytics';
 import { getViolations } from '../storage/redis';
 import { getRulewiserSettings, getSubredditRules } from '../storage/rules';
 import type {
@@ -314,9 +315,11 @@ api.get('/dashboard', async (c) => {
     const violations = getStoredViolations(
       await getViolations(redis, context.subredditName)
     );
+    const healthScore = await calculateHealthScore(redis, context.subredditName);
 
     return c.json<DashboardResponse>({
       type: 'dashboard',
+      healthScore,
       todayCount: violations.filter((violation) => violation.timestamp > today)
         .length,
       weekCount: violations.filter((violation) => violation.timestamp > thisWeek)

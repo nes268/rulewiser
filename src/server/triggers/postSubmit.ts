@@ -37,9 +37,10 @@ export const handlePostSubmit = async (
     rulewiserSettings
   );
 
+  const analyzedAt = Date.now();
   await Promise.all([
     rememberPostTitle(post.id, post.title),
-    savePostData(redis, post.id, { analysis, timestamp: Date.now() }),
+    savePostData(redis, post.id, { analysis, timestamp: analyzedAt }),
   ]);
 
   const hasViolations = analysis.violations.some(
@@ -56,7 +57,12 @@ export const handlePostSubmit = async (
   if (hasViolations || hasTitleIssues || analysis.duplicate) {
     if (rulewiserSettings.commentOnViolation && isPostId(post.id)) {
       const comment = buildWarningComment(authorName, analysis);
-      await reddit.submitComment({ id: post.id, text: comment });
+      const postedComment = await reddit.submitComment({ id: post.id, text: comment });
+      await savePostData(redis, post.id, {
+        analysis,
+        timestamp: analyzedAt,
+        botCommentId: postedComment.id,
+      });
       console.log(`RuleWiser warning comment posted for ${post.id}`);
     }
 

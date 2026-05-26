@@ -118,6 +118,18 @@ const getVolumeInsight = (label: string, count: number) => {
   return `${label}: ${count} hit${count === 1 ? '' : 's'}.`;
 };
 
+const getHealthScoreInsight = (score: number) => {
+  if (score >= 85) {
+    return `${score}/100: healthy.`;
+  }
+
+  if (score >= 65) {
+    return `${score}/100: watch trends.`;
+  }
+
+  return `${score}/100: needs attention.`;
+};
+
 const getRuleInsight = (
   rule: DashboardResponse['topRules'][number],
   index: number
@@ -363,11 +375,23 @@ export const ModDashboard = () => {
             </InsightCard>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <InsightCard
+              className="rw-metric rw-card-hover p-5"
+              insight={getHealthScoreInsight(dashboard.healthScore)}
+              revealDelay={0.04}
+            >
+              <p className="text-4xl font-black text-emerald-100">
+                {dashboard.healthScore}
+              </p>
+              <p className="mt-1 text-sm font-medium text-slate-400">
+                Health Score
+              </p>
+            </InsightCard>
             <InsightCard
               className="rw-metric rw-card-hover p-5"
               insight={getVolumeInsight('Today', dashboard.todayCount)}
-              revealDelay={0.08}
+              revealDelay={0.1}
             >
               <p className="text-4xl font-black text-orange-100">
                 {dashboard.todayCount}
@@ -377,7 +401,7 @@ export const ModDashboard = () => {
             <InsightCard
               className="rw-metric rw-card-hover p-5"
               insight={getVolumeInsight('Week', dashboard.weekCount)}
-              revealDelay={0.14}
+              revealDelay={0.16}
             >
               <p className="text-4xl font-black text-cyan-100">
                 {dashboard.weekCount}
@@ -389,7 +413,7 @@ export const ModDashboard = () => {
             <InsightCard
               className="rw-metric rw-card-hover p-5"
               insight={getVolumeInsight('Total', dashboard.totalCount)}
-              revealDelay={0.2}
+              revealDelay={0.22}
             >
               <p className="text-4xl font-black text-emerald-100">
                 {dashboard.totalCount}

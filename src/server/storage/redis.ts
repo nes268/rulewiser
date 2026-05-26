@@ -2,6 +2,7 @@ import { redis, type RedisClient } from '@devvit/web/server';
 
 const postTitleKey = (postId: string) => `post-title:${postId}`;
 const postDataKey = (postId: string) => `post:${postId}`;
+const falsePositiveKey = (postId: string) => `falsepositive:${postId}`;
 const violationsKey = (subreddit: string) => `violations:${subreddit}`;
 const oneWeekInSeconds = 604_800;
 const maxStoredViolations = 500;
@@ -76,4 +77,18 @@ export const getRememberedPostTitle = async (
   const title = await redis.get(postTitleKey(postId));
 
   return title ?? undefined;
+};
+
+export const markFalsePositive = async (
+  redisClient: RedisClient,
+  postId: string
+): Promise<void> => {
+  await redisClient.set(falsePositiveKey(postId), 'true');
+};
+
+export const isFalsePositive = async (
+  redisClient: RedisClient,
+  postId: string
+): Promise<boolean> => {
+  return (await redisClient.get(falsePositiveKey(postId))) === 'true';
 };
