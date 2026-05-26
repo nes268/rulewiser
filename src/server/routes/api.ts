@@ -257,18 +257,16 @@ api.post('/precheck', async (c) => {
     const titleIssues = checkTitleDeterministic(input.title);
     let aiResult: GeminiAnalysisResponse | null = null;
 
-    if (rulewiserSettings.aiEnabled && rulewiserSettings.geminiApiKey) {
-      try {
-        aiResult = await analyzeWithGemini(
-          input.title,
-          input.body,
-          rules,
-          rulewiserSettings.customContext,
-          rulewiserSettings.geminiApiKey
-        );
-      } catch (error) {
-        console.error('Gemini pre-check failed, using deterministic only:', error);
-      }
+    try {
+      aiResult = await analyzeWithGemini(
+        input.title,
+        input.body,
+        rules,
+        rulewiserSettings.customContext || '',
+        rulewiserSettings.geminiApiKey || ''
+      );
+    } catch (error) {
+      console.error('Pre-check analysis failed, using deterministic only:', error);
     }
 
     const violations = aiResult?.violations ?? [];
@@ -290,7 +288,7 @@ api.post('/precheck', async (c) => {
       titleQuality: score.titleQuality,
       suggestedTitles: aiResult?.suggestedTitles ?? [],
       spamSignals,
-      aiEnabled: rulewiserSettings.aiEnabled && Boolean(rulewiserSettings.geminiApiKey),
+      aiEnabled: true,
       riskLevel: score.riskLevel,
       classification: score.classification,
       recommendation: score.recommendation,
@@ -319,6 +317,7 @@ api.get('/dashboard', async (c) => {
 
     return c.json<DashboardResponse>({
       type: 'dashboard',
+      lastUpdatedAt: now,
       healthScore,
       todayCount: violations.filter((violation) => violation.timestamp > today)
         .length,

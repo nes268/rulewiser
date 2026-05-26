@@ -37,6 +37,13 @@
         "endpoint": "/internal/menu/dashboard-create"
       },
       {
+        "label": "Clean RuleWiser Posts",
+        "description": "Delete old RuleWiser posts and pin the latest dashboard/check posts",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/cleanup-rulewiser-posts"
+      },
+      {
         "label": "🔍 RuleWiser: Re-Analyze",
         "description": "Re-run RuleWiser analysis on this post",
         "location": "post",

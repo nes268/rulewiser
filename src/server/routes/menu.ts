@@ -2,7 +2,11 @@ import { Hono } from 'hono';
 import type { MenuItemRequest, T3, UiResponse } from '@devvit/web/shared';
 import { context, reddit, redis } from '@devvit/web/server';
 import { analyzePost } from '../analysis/engine';
-import { createDashboardPost, createPreCheckPost } from '../core/post';
+import {
+  createDashboardPost,
+  createPinnedRuleWiserPosts,
+  createPreCheckPost,
+} from '../core/post';
 import { markFalsePositive, savePostData, saveViolation } from '../storage/redis';
 import { getRulewiserSettings } from '../storage/rules';
 
@@ -25,6 +29,30 @@ menu.post('/post-create', async (c) => {
     return c.json<UiResponse>(
       {
         showToast: 'Failed to create post',
+      },
+      400
+    );
+  }
+});
+
+menu.post('/cleanup-rulewiser-posts', async (c) => {
+  try {
+    const { dashboardPost, deletedCount } = await createPinnedRuleWiserPosts(
+      context.subredditName
+    );
+
+    return c.json<UiResponse>(
+      {
+        showToast: `Pinned latest RuleWiser posts and removed ${deletedCount} old post(s).`,
+        navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${dashboardPost.id}`,
+      },
+      200
+    );
+  } catch (error) {
+    console.error(`Error cleaning RuleWiser posts: ${error}`);
+    return c.json<UiResponse>(
+      {
+        showToast: 'Failed to clean old RuleWiser posts',
       },
       400
     );

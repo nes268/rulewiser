@@ -74,6 +74,7 @@ export type DashboardRecentViolation = {
 
 export type DashboardResponse = {
   type: 'dashboard';
+  lastUpdatedAt: number;
   healthScore: number;
   todayCount: number;
   weekCount: number;

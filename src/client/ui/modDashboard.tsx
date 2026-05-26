@@ -1,5 +1,5 @@
 import { motion, type Variants } from 'framer-motion';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import type { DashboardResponse } from '../../shared/api';
 
 const formatDate = (timestamp: number) => {
@@ -13,6 +13,26 @@ const formatDate = (timestamp: number) => {
     hour: 'numeric',
     minute: '2-digit',
   }).format(new Date(timestamp));
+};
+
+const formatRelativeUpdate = (timestamp: number) => {
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+
+  if (seconds < 10) {
+    return 'Updated just now';
+  }
+
+  if (seconds < 60) {
+    return `Updated ${seconds}s ago`;
+  }
+
+  const minutes = Math.floor(seconds / 60);
+
+  if (minutes < 60) {
+    return `Updated ${minutes}m ago`;
+  }
+
+  return `Updated ${formatDate(timestamp)}`;
 };
 
 const brandLetters = 'RULEWISER'.split('');
@@ -237,8 +257,41 @@ const RuleWiserIntro = () => (
 export const ModDashboard = () => {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);
+
+  const loadDashboard = useCallback(async (showFullLoading: boolean) => {
+    if (showFullLoading) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
+
+    try {
+      const response = await fetch('/api/dashboard');
+
+      if (!response.ok) {
+        throw new Error(`Dashboard failed with HTTP ${response.status}`);
+      }
+
+      const data: DashboardResponse = await response.json();
+      setDashboard(data);
+      setError(null);
+    } catch (caughtError) {
+      console.error('Failed to load dashboard', caughtError);
+
+      if (showFullLoading) {
+        setError('Could not load dashboard data.');
+      }
+    } finally {
+      if (showFullLoading) {
+        setLoading(false);
+      } else {
+        setRefreshing(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const introTimer = window.setTimeout(() => {
@@ -249,26 +302,35 @@ export const ModDashboard = () => {
   }, []);
 
   useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        const response = await fetch('/api/dashboard');
+    const initialLoad = window.setTimeout(() => {
+      void loadDashboard(true);
+    }, 0);
 
-        if (!response.ok) {
-          throw new Error(`Dashboard failed with HTTP ${response.status}`);
-        }
+    return () => window.clearTimeout(initialLoad);
+  }, [loadDashboard]);
 
-        const data: DashboardResponse = await response.json();
-        setDashboard(data);
-      } catch (caughtError) {
-        console.error('Failed to load dashboard', caughtError);
-        setError('Could not load dashboard data.');
-      } finally {
-        setLoading(false);
+  useEffect(() => {
+    const refreshInterval = window.setInterval(() => {
+      void loadDashboard(false);
+    }, 10_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void loadDashboard(false);
       }
     };
+    const refreshOnFocus = () => {
+      void loadDashboard(false);
+    };
 
-    void loadDashboard();
-  }, []);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('focus', refreshOnFocus);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', refreshOnFocus);
+    };
+  }, [loadDashboard]);
 
   if (showIntro) {
     return <RuleWiserIntro />;
@@ -368,10 +430,25 @@ export const ModDashboard = () => {
               </p>
             </div>
             <InsightCard
-              className="rw-card px-4 py-3 text-sm text-slate-300"
-              insight={`Loaded ${dashboard.totalCount} total hit${dashboard.totalCount === 1 ? '' : 's'}.`}
+              className="rw-card min-w-44 px-4 py-3 text-sm text-slate-300"
+              insight={`${dashboard.totalCount} total hit${dashboard.totalCount === 1 ? '' : 's'} synced live.`}
             >
-              Updated on load
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
+                  {refreshing ? 'Syncing live...' : 'Live dashboard'}
+                </span>
+                <span>{formatRelativeUpdate(dashboard.lastUpdatedAt)}</span>
+                <motion.button
+                  className="rw-button-secondary px-3 py-2 text-xs"
+                  disabled={refreshing}
+                  onClick={() => void loadDashboard(false)}
+                  type="button"
+                  whileHover={{ scale: refreshing ? 1 : 1.02, y: refreshing ? 0 : -1 }}
+                  whileTap={{ scale: refreshing ? 1 : 0.98 }}
+                >
+                  {refreshing ? 'Refreshing...' : 'Refresh now'}
+                </motion.button>
+              </div>
             </InsightCard>
           </div>
 

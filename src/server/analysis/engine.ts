@@ -48,18 +48,16 @@ export const analyzePost = async (
 
   let aiResult: GeminiAnalysisResponse | null = null;
 
-  if (settings.aiEnabled && settings.geminiApiKey) {
-    try {
-      aiResult = await analyzeWithGemini(
-        post.title,
-        post.body,
-        rules,
-        settings.customContext,
-        settings.geminiApiKey
-      );
-    } catch (error) {
-      console.error('Gemini API failed, using deterministic only:', error);
-    }
+  try {
+    aiResult = await analyzeWithGemini(
+      post.title,
+      post.body,
+      rules,
+      settings.customContext || '',
+      settings.geminiApiKey || ''
+    );
+  } catch (error) {
+    console.error('Analysis failed:', error);
   }
 
   await cachePost(redisClient, post.subreddit, {

@@ -3,31 +3,26 @@ import type {
   OnAppUpgradeRequest,
   TriggerResponse,
 } from '@devvit/web/shared';
-import { createDashboardPost, createPreCheckPost } from '../core/post';
+import { createPinnedRuleWiserPosts } from '../core/post';
 
 export const handleAppInstall = async (
   input: OnAppInstallRequest | OnAppUpgradeRequest
 ): Promise<TriggerResponse> => {
-  console.log('RuleWiser installed on', input.subreddit?.name);
-  const [dashboardPost, preCheckPost] = await Promise.all([
-    createDashboardPost(),
-    createPreCheckPost(),
-  ]);
+  const subredditName = input.subreddit?.name;
 
-  try {
-    await preCheckPost.sticky(1);
-  } catch (error) {
-    console.error('Failed to sticky RuleWiser Check post:', error);
+  if (!subredditName) {
+    return {
+      status: 'ignored',
+      message: 'App install trigger did not include a subreddit.',
+    };
   }
 
-  try {
-    await dashboardPost.sticky(2);
-  } catch (error) {
-    console.error('Failed to sticky RuleWiser Dashboard post:', error);
-  }
+  console.log('RuleWiser installed on', subredditName);
+  const { dashboardPost, preCheckPost, deletedCount } =
+    await createPinnedRuleWiserPosts(subredditName);
 
   return {
     status: 'success',
-    message: `RuleWiser posts created in ${input.subreddit?.name ?? 'unknown subreddit'}: check=${preCheckPost.id}, dashboard=${dashboardPost.id}.`,
+    message: `RuleWiser posts created in ${subredditName}: check=${preCheckPost.id}, dashboard=${dashboardPost.id}, cleaned=${deletedCount}.`,
   };
 };

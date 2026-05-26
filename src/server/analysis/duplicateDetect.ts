@@ -15,6 +15,29 @@ export type DuplicateResult = {
 const recentPostsKey = (subreddit: string) => `recentposts:${subreddit}`;
 const recentPostCacheSeconds = 604_800;
 const maxRecentPosts = 100;
+const ruleWiserPostTitles = new Set([
+  'check your post before submitting - rulewiser',
+  'rulewiser mod dashboard',
+]);
+const weakDuplicateWords = new Set([
+  'about',
+  'after',
+  'again',
+  'anyone',
+  'before',
+  'could',
+  'first',
+  'help',
+  'issue',
+  'please',
+  'problem',
+  'question',
+  'should',
+  'thing',
+  'where',
+  'which',
+  'would',
+]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -41,8 +64,14 @@ const getKeywords = (text: string): Set<string> => {
       .toLowerCase()
       .replace(/[^a-z0-9 ]/g, '')
       .split(' ')
-      .filter((word) => word.length > 4)
+      .filter((word) => word.length > 4 && !weakDuplicateWords.has(word))
   );
+};
+
+const shouldSkipDuplicateCheck = (title: string): boolean => {
+  const normalized = title.trim().toLowerCase();
+
+  return ruleWiserPostTitles.has(normalized);
 };
 
 export const checkDuplicate = async (
@@ -50,9 +79,13 @@ export const checkDuplicate = async (
   subreddit: string,
   title: string
 ): Promise<DuplicateResult> => {
+  if (shouldSkipDuplicateCheck(title)) {
+    return null;
+  }
+
   const recentPosts = parseRecentPosts(
     await redisClient.get(recentPostsKey(subreddit))
-  );
+  ).filter((post) => !shouldSkipDuplicateCheck(post.title));
 
   if (recentPosts.length === 0) {
     return null;
@@ -60,7 +93,7 @@ export const checkDuplicate = async (
 
   const newKeywords = getKeywords(title);
 
-  if (newKeywords.size === 0) {
+  if (newKeywords.size < 2) {
     return null;
   }
 
@@ -69,10 +102,13 @@ export const checkDuplicate = async (
     const intersection = new Set(
       [...newKeywords].filter((keyword) => existingKeywords.has(keyword))
     );
-    const overlap =
-      intersection.size / Math.max(newKeywords.size, existingKeywords.size);
+    if (existingKeywords.size < 2) {
+      continue;
+    }
 
-    if (overlap > 0.6) {
+    const overlap = intersection.size / Math.max(newKeywords.size, existingKeywords.size);
+
+    if (overlap >= 0.65 && intersection.size >= 2) {
       return {
         duplicate: true,
         matchedPost: post,
@@ -89,8 +125,14 @@ export const cachePost = async (
   subreddit: string,
   post: RecentPost
 ): Promise<void> => {
+  if (shouldSkipDuplicateCheck(post.title)) {
+    return;
+  }
+
   const cacheKey = recentPostsKey(subreddit);
-  const posts = parseRecentPosts(await redisClient.get(cacheKey));
+  const posts = parseRecentPosts(await redisClient.get(cacheKey)).filter(
+    (recentPost) => recentPost.id !== post.id && !shouldSkipDuplicateCheck(recentPost.title)
+  );
 
   posts.unshift(post);
 

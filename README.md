@@ -1,60 +1,238 @@
-# RuleWiser 🛡️
+# RuleWiser
 
-### Intelligent Pre-Submission Analysis for Reddit Communities
+### Intelligent pre-submission analysis for Reddit communities
 
-RuleWiser is a Devvit app that helps users avoid breaking subreddit rules
-before they post — and gives moderators the analytics to understand why
-violations happen.
+RuleWiser is a Devvit Web app that helps Reddit users understand subreddit rules
+before they post, while giving moderators a live view of recurring rule issues,
+duplicate patterns, and community health.
 
-## The Problem
+**App page:** https://developers.reddit.com/apps/rulewiserr
 
-Every day, Reddit moderators remove posts from users who simply did not know the
-rules. AutoModerator enforces rules but cannot explain why, suggest fixes, or
-detect semantic duplicates. RuleWiser closes that gap.
+---
 
-## Features
+## Why It Matters
 
-- Pre-Check Assistant — users check their draft before posting
-- Post-Submit Guardian — auto-analyzes every post and comments warnings
-- Semantic Duplicate Detection — catches paraphrased duplicates AutoModerator misses
-- AI Title Rewriter — suggests better titles, not just rejection
-- Mod Analytics Dashboard — violation trends, repeat violators, and health score
-- Smart Removal Reasons — suggests removal reasons when mods remove flagged posts
-- False Positive Marking — moderators can mark RuleWiser mistakes for review
+Most removed posts are not malicious. They come from users who missed a rule,
+wrote an unclear title, reposted a common question, or did not understand the
+community’s posting expectations.
 
-## How to Install
+RuleWiser moves moderation earlier in the workflow. Instead of only reacting
+after a bad post appears, it gives users practical feedback before submission and
+gives moderators analytics after submission.
 
-1. Go to your subreddit.
-2. Search for RuleWiser in the Devvit app directory.
-3. Click Install.
-4. Go to Mod Tools → App Settings → Add your Gemini API key.
-5. Two posts are auto-created: Pre-Check post and Mod Dashboard.
+---
+
+## Product Overview
+
+### Pre-Check Assistant
+
+A pinned custom post where users can paste a draft title and body before
+submitting. RuleWiser returns:
+
+- Overall post score
+- Risk classification
+- Rule-aware warnings
+- Title quality feedback
+- Suggested title rewrites
+- Clear recommendation for what to fix next
+
+### Post-Submit Guardian
+
+Every new post is analyzed through Devvit’s `onPostSubmit` trigger. If RuleWiser
+finds issues, it posts a clear warning comment with the relevant signal and a
+suggested fix.
+
+### Moderator Dashboard
+
+A live dashboard shows moderation signals from Redis:
+
+- Subreddit Health Score
+- Today / This Week / Total violation counts
+- Top rule and title-warning patterns
+- Repeat violators
+- Recent violation activity
+- Live refresh status and manual refresh
+
+### Moderator Actions
+
+RuleWiser adds moderator menu tools:
+
+- **Re-Analyze** — rerun analysis on a post and show the latest score
+- **Mark as False Positive** — store a false-positive marker for review
+- **Clean RuleWiser Posts** — create the latest app posts, pin them, and remove
+  older RuleWiser-managed posts
+
+---
+
+## How The Analysis Works
+
+RuleWiser currently uses a local deterministic intelligence engine. It produces
+AI-style explanations, confidence scores, risk labels, and title suggestions
+without depending on paid external AI requests, so the app avoids API cost, rate
+limits, and external service failures.
+
+External AI API integration is planned as a future enhancement once API access is
+approved and reliable for production use.
+
+### 1. Title Quality Checks
+
+Fast deterministic checks look for:
+
+- Very short titles
+- ALL CAPS
+- Vague openers such as “help” or “question”
+- Clickbait phrases
+- Excessive punctuation
+- Low descriptive detail
+- Missing body context
+
+### 2. Rule-Aware Pattern Matching
+
+RuleWiser fetches and caches the subreddit’s rules, then checks post content
+against rule text and moderator-provided context. It can flag patterns such as:
+
+- Self-promotion or spam language
+- Suspicious promotional links
+- Harassment or civility concerns
+- Possible privacy exposure
+- Spoiler wording
+- Off-topic terms
+- Meme or reaction-post language
+- Question-post restrictions
+- Account-age or karma requirement notes
+
+Each match includes a confidence score, explanation, and suggested fix.
+
+### 3. Duplicate-Risk Detection
+
+Recent post titles are cached in Redis. New titles are compared against recent
+titles using keyword overlap to identify likely reposts or repeated questions.
+
+### 4. Analytics And Rollups
+
+Detected issues are stored in Redis for dashboard reporting. A scheduled daily
+rollup stores summary analytics for trend tracking.
+
+---
+
+## Architecture
+
+```text
+src/client
+  splash.tsx              Inline feed card
+  game.tsx                Pre-check app entry
+  dashboard.tsx           Dashboard app entry
+  ui/preCheckPost.tsx     Pre-check UI
+  ui/modDashboard.tsx     Live analytics dashboard
+
+src/server
+  analysis/               Local analysis, scoring, title checks, duplicates
+  comments/               Warning comment generation
+  core/                   Custom post creation and cleanup
+  routes/                 API, menu, trigger, scheduler endpoints
+  storage/                Redis, rules cache, analytics helpers
+  triggers/               App install, post submit, mod action handlers
+
+src/shared
+  api.ts                  Shared client/server response types
+```
+
+---
 
 ## Tech Stack
 
-- Devvit Web
-- React 19
-- Vite
-- Tailwind CSS
-- Hono
-- Reddit API
-- Google Gemini AI
-- Redis
-- TypeScript
+- **Devvit Web** — Reddit app platform
+- **React 19** — custom post interfaces
+- **Framer Motion** — polished motion and hover interactions
+- **Tailwind CSS 4** — styling
+- **Hono** — server route handling
+- **Redis** — rules cache, post cache, analytics, violation history
+- **Reddit API** — subreddit rules, posts, comments, triggers
+- **TypeScript** — type-safe client, server, and shared contracts
 
-## Development
+---
+
+## Installation
+
+1. Open the RuleWiser app page.
+2. Install it on a subreddit you moderate.
+3. RuleWiser creates the Pre-Check post and Mod Dashboard post.
+4. Optional: configure strict mode, warning comments, thresholds, and custom
+   subreddit context in app settings.
+
+No external AI key is required for the current local analysis engine.
+
+---
+
+## Local Development
+
+Install dependencies:
 
 ```powershell
 npm install
+```
+
+Run Devvit playtest:
+
+```powershell
 npm run dev
 ```
 
-Playtest is configured for `r/TestRuleWiser` in `devvit.json`.
+The playtest subreddit is configured in `devvit.json`.
 
-Useful checks:
+Run checks:
 
 ```powershell
 npm run type-check
 npx eslint "src/**/*.{ts,tsx}"
 npm run build
 ```
+
+Upload a new app version:
+
+```powershell
+devvit upload
+```
+
+Submit for public review:
+
+```powershell
+$env:DEVVIT_ALLOW_SOURCE_UPLOAD="1"
+devvit publish --public
+```
+
+---
+
+## Current Status
+
+Implemented:
+
+- Pre-check custom post
+- Post-submit analysis
+- Warning comments
+- Local deterministic intelligence engine
+- Title suggestions
+- Duplicate-risk detection
+- Live moderator dashboard
+- Health score
+- Repeat violator reporting
+- Re-analyze menu action
+- False-positive menu action
+- RuleWiser post cleanup menu action
+- Bot comment cleanup on moderator approval
+- Daily analytics rollup endpoint
+
+In development / future plans:
+
+- External AI API integration after access approval
+- Deeper semantic duplicate matching beyond keyword overlap
+- Richer false-positive review workflow
+- Dashboard charts for longer time ranges
+- More configurable rule-pattern templates per subreddit
+- Public app review completion and broader marketplace availability
+
+---
+
+## License
+
+BSD-3-Clause

@@ -7,8 +7,10 @@ export type TitleIssue = {
 
 export const checkTitleDeterministic = (title: string): TitleIssue[] => {
   const issues: TitleIssue[] = [];
+  const trimmedTitle = title.trim();
+  const wordCount = trimmedTitle.split(/\s+/).filter(Boolean).length;
 
-  if (title.length < 10) {
+  if (trimmedTitle.length < 10 || wordCount < 3) {
     issues.push({ type: 'too_short', confidence: 95 });
   }
 
@@ -20,7 +22,11 @@ export const checkTitleDeterministic = (title: string): TitleIssue[] => {
     issues.push({ type: 'all_caps', confidence: 90 });
   }
 
-  if (/click(bait|here)|you won't believe/i.test(title)) {
+  if (
+    /click(bait|here)|you won't believe|must see|shocking|gone wrong/i.test(title) ||
+    /\?\s*\?|!!+/.test(title) ||
+    /^(help|question|issue|problem|anyone|pls|please help)\b/i.test(trimmedTitle)
+  ) {
     issues.push({ type: 'clickbait', confidence: 85 });
   }
 
