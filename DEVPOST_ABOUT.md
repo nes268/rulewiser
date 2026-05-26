@@ -37,11 +37,11 @@ If a moderator later approves the post, RuleWiser can remove its own bot comment
 
 Moderators get a dedicated dashboard with:
 
-- Subreddit Health Score
-- Today / This Week / Total violation counts
-- Top recurring rule and title-warning patterns
-- Repeat violators
-- Recent violation activity
+- Community health status
+- Last 24 hours, 7-day, and total flag counts
+- Top recurring rule, title, duplicate, and spam patterns
+- Repeat flagged authors
+- Recent flagged posts with the exact reason shown
 - Live refresh and manual refresh
 
 ### For Moderators: Menu Tools
@@ -60,19 +60,19 @@ RuleWiser adds practical moderation actions:
 Users can test a title and body before submitting, reducing avoidable removals.
 
 **Local Deterministic Intelligence Engine**  
-The current analyzer runs fully inside the Devvit app. It produces AI-style explanations, confidence scores, risk levels, and title suggestions without external AI API calls.
+The analyzer gives clear explanations, confidence scores, risk levels, and title suggestions without depending on an external AI service.
 
 **Rule-Aware Analysis**  
-RuleWiser reads subreddit rules through the Reddit API, caches them in Redis, and uses that rule text plus moderator context to explain why a post may be risky.
+RuleWiser reads subreddit rules and moderator context, then explains why a draft may be risky in that specific community.
 
 **Title Rewrite Suggestions**  
 Users receive specific title improvements instead of a generic rejection.
 
 **Duplicate-Risk Detection**  
-For submitted posts, recent titles are cached in Redis and compared against new posts to highlight likely repeated topics.
+For submitted posts, recent titles are compared against new posts to highlight likely repeated topics.
 
 **Live Moderator Dashboard**  
-Moderators can see which rules cause friction, which users are repeatedly flagged, and how community health is changing.
+Moderators can see which rules cause friction, which users are repeatedly flagged, which signals are trending, and why each recent post appeared on the dashboard.
 
 **Zero External AI Cost Today**  
 Because the current system is local-first, it avoids AI API bills, rate limits, and demo-breaking request failures.
@@ -88,7 +88,7 @@ Because the current system is local-first, it avoids AI API bills, rate limits, 
 - **Framer Motion** for animated loading, hover insights, and polished UI motion.
 - **Tailwind CSS 4** for styling.
 - **Hono** for server routing.
-- **Redis** for rules cache, recent post cache, violation history, analytics, and false-positive markers.
+- **Devvit data storage** for rules cache, recent post cache, flag history, analytics, and false-positive markers.
 - **Reddit API** for subreddit rules, posts, comments, and moderator workflows.
 - **TypeScript** for shared client/server contracts.
 
@@ -106,10 +106,10 @@ The analyzer looks for promotional spam, suspicious link patterns, self-promo ph
 The engine compares post content against actual subreddit rules and custom moderator context. If a subreddit has rules about titles, questions, spoilers, memes, account age, body requirements, or promotion, RuleWiser can connect the signal to that community's rule language.
 
 **4. Duplicate-risk detection**  
-Recent submitted post titles are stored in Redis. New submitted posts are compared against recent titles using cleaned keyword overlap, while app-created RuleWiser posts and weak generic words are ignored to reduce false positives.
+Recent submitted post titles are compared against new titles using cleaned keyword overlap, while app-created RuleWiser posts and weak generic words are ignored to reduce false positives.
 
 **5. Scoring and recommendations**  
-RuleWiser combines violations, title quality, spam signals, and duplicate risk into an overall score, risk label, classification, and next-step recommendation.
+RuleWiser combines violations, title quality, spam signals, and duplicate risk into an overall score, risk label, classification, score explanation, and next-step recommendation.
 
 ---
 
@@ -124,10 +124,10 @@ RuleWiser loads rules, settings, and recent post cache
         |
 Local analyzer scores title, body, rules, spam, and duplicate risk
         |
-If issues are found:
+If a real issue is found:
   - Warning comment is posted
-  - Analysis is saved in Redis
-  - Dashboard analytics are updated
+  - The visible reason is saved with the score
+  - Dashboard analytics are updated without duplicating the same post
         |
 Moderators review signals in dashboard or menu actions
 ```
@@ -146,7 +146,7 @@ A useful moderation assistant cannot say the same thing for every post. The engi
 
 ### Keeping Devvit workflows fast
 
-Post-submit triggers need to finish quickly. RuleWiser keeps analysis lightweight by caching subreddit rules, storing only compact post metadata, and using Redis for analytics.
+Post-submit checks need to finish quickly. RuleWiser keeps analysis lightweight by saving only the small pieces of context needed for scores, warnings, and dashboard trends.
 
 ### Making the UI feel polished inside Reddit
 
@@ -156,7 +156,7 @@ Reddit owns the outer page, so the app experience has to feel good inside a cust
 
 ## What I Learned
 
-- How to build a Devvit Web app with custom posts, triggers, Redis, menu items, scheduler endpoints, and app settings.
+- How to build a Devvit Web app with custom posts, triggers, menu items, scheduler endpoints, app settings, and saved moderation signals.
 - How to design moderation tools for both users and moderators.
 - How to turn API limitations into a local-first architecture.
 - How important clear explanations are when moderation feedback affects real users.
@@ -191,6 +191,8 @@ Implemented:
 - Title quality checks and title suggestions.
 - Duplicate-risk detection for submitted posts.
 - Live moderator dashboard.
+- Score breakdown and situation-specific next steps.
+- Recent flagged posts with visible rule, title, duplicate, or spam reasons.
 - Health score and analytics rollup endpoint.
 - Re-analyze, false-positive, and cleanup menu actions.
 - Bot comment cleanup after moderator approval.

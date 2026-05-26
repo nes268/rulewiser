@@ -1,8 +1,17 @@
 import { context, reddit, redis } from '@devvit/web/server';
-import type { OnPostSubmitRequest, T3, TriggerResponse } from '@devvit/web/shared';
+import type {
+  OnPostSubmitRequest,
+  T3,
+  TriggerResponse,
+} from '@devvit/web/shared';
 import { analyzePost } from '../analysis/engine';
 import { buildWarningComment } from '../comments/warningComment';
-import { rememberPostTitle, savePostData, saveViolation } from '../storage/redis';
+import { isRuleWiserManagedPost } from '../core/post';
+import {
+  rememberPostTitle,
+  savePostData,
+  saveViolation,
+} from '../storage/redis';
 import { getRulewiserSettings } from '../storage/rules';
 
 const isPostId = (id: string): id is T3 => id.startsWith('t3_');
@@ -20,6 +29,13 @@ export const handlePostSubmit = async (
   }
 
   console.log(`PostSubmit firing for post ${post.id}`);
+
+  if (isRuleWiserManagedPost(post.title)) {
+    return {
+      status: 'ignored',
+      message: 'Ignored RuleWiser managed post.',
+    };
+  }
 
   const subredditName = input.subreddit?.name ?? context.subredditName;
   const authorName = input.author?.name ?? 'there';
@@ -54,10 +70,18 @@ export const handlePostSubmit = async (
     `RuleWiser analysis for ${post.id}: score=${analysis.overallScore}, risk=${analysis.riskLevel}, classification=${analysis.classification}, violations=${analysis.violations.length}, titleIssues=${analysis.titleIssues.length}, duplicate=${analysis.duplicate ? 'yes' : 'no'}, threshold=${rulewiserSettings.violationThreshold}, commentOnViolation=${rulewiserSettings.commentOnViolation}`
   );
 
-  if (hasViolations || hasTitleIssues || analysis.duplicate) {
+  if (
+    hasViolations ||
+    hasTitleIssues ||
+    analysis.duplicate ||
+    analysis.spamSignals
+  ) {
     if (rulewiserSettings.commentOnViolation && isPostId(post.id)) {
       const comment = buildWarningComment(authorName, analysis);
-      const postedComment = await reddit.submitComment({ id: post.id, text: comment });
+      const postedComment = await reddit.submitComment({
+        id: post.id,
+        text: comment,
+      });
       await savePostData(redis, post.id, {
         analysis,
         timestamp: analyzedAt,
@@ -89,12 +113,16 @@ export const handlePostSubmit = async (
       author: authorName,
       violations: analysis.violations,
       titleIssues: analysis.titleIssues,
+      duplicate: analysis.duplicate,
+      spamSignals: analysis.spamSignals,
+      riskLevel: analysis.riskLevel,
+      classification: analysis.classification,
       score: analysis.overallScore,
     });
   }
 
   return {
     status: 'success',
-    message: `Analyzed post ${post.id} with ${analysis.violations.length} AI violation(s).`,
+    message: `Analyzed post ${post.id} with ${analysis.violations.length} rule signal(s).`,
   };
 };

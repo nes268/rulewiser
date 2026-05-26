@@ -1,5 +1,9 @@
 import type { RedditClient, RedisClient } from '@devvit/web/server';
-import { cachePost, checkDuplicate, type DuplicateResult } from './duplicateDetect';
+import {
+  cachePost,
+  checkDuplicate,
+  type DuplicateResult,
+} from './duplicateDetect';
 import {
   analyzeWithGemini,
   type GeminiAnalysisResponse,
@@ -9,6 +13,8 @@ import {
   scoreAnalysis,
   type ModerationClassification,
   type RiskLevel,
+  type ScoreFactor,
+  type SituationSuggestion,
 } from './scoring';
 import { checkTitleDeterministic, type TitleIssue } from './titleCheck';
 import { getSubredditRules, type RulewiserSettings } from '../storage/rules';
@@ -27,7 +33,9 @@ export type PostAnalysis = {
   duplicate: DuplicateResult;
   overallScore: number;
   titleQuality: number;
+  scoreBreakdown: ScoreFactor[];
   suggestedTitles: string[];
+  nextSteps: SituationSuggestion[];
   spamSignals: boolean;
   riskLevel: RiskLevel;
   classification: ModerationClassification;
@@ -43,7 +51,7 @@ export const analyzePost = async (
   const [rules, duplicateResult, titleIssues] = await Promise.all([
     getSubredditRules(redditClient, redisClient, post.subreddit),
     checkDuplicate(redisClient, post.subreddit, post.title),
-    Promise.resolve(checkTitleDeterministic(post.title)),
+    Promise.resolve(checkTitleDeterministic(post.title, post.body)),
   ]);
 
   let aiResult: GeminiAnalysisResponse | null = null;
@@ -82,7 +90,9 @@ export const analyzePost = async (
     duplicate: duplicateResult,
     overallScore: score.overallScore,
     titleQuality: score.titleQuality,
+    scoreBreakdown: score.scoreBreakdown,
     suggestedTitles: aiResult?.suggestedTitles ?? [],
+    nextSteps: score.nextSteps,
     spamSignals,
     riskLevel: score.riskLevel,
     classification: score.classification,

@@ -23,7 +23,7 @@ export const createDashboardPost = async () => {
   });
 };
 
-const isRuleWiserManagedPost = (title: string) => {
+export const isRuleWiserManagedPost = (title: string) => {
   const normalizedTitle = title.trim().toLowerCase();
 
   if (

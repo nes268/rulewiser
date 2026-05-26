@@ -3,11 +3,14 @@ import type { MenuItemRequest, T3, UiResponse } from '@devvit/web/shared';
 import { context, reddit, redis } from '@devvit/web/server';
 import { analyzePost } from '../analysis/engine';
 import {
-  createDashboardPost,
   createPinnedRuleWiserPosts,
-  createPreCheckPost,
+  isRuleWiserManagedPost,
 } from '../core/post';
-import { markFalsePositive, savePostData, saveViolation } from '../storage/redis';
+import {
+  markFalsePositive,
+  savePostData,
+  saveViolation,
+} from '../storage/redis';
 import { getRulewiserSettings } from '../storage/rules';
 
 export const menu = new Hono();
@@ -16,11 +19,14 @@ const isPostId = (id: string): id is T3 => id.startsWith('t3_');
 
 menu.post('/post-create', async (c) => {
   try {
-    const post = await createPreCheckPost();
+    const { preCheckPost, deletedCount } = await createPinnedRuleWiserPosts(
+      context.subredditName
+    );
 
     return c.json<UiResponse>(
       {
-        navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${post.id}`,
+        showToast: `Pinned latest RuleWiser posts and removed ${deletedCount} old post(s).`,
+        navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${preCheckPost.id}`,
       },
       200
     );
@@ -76,6 +82,16 @@ menu.post('/reanalyze-post', async (c) => {
       reddit.getPostById(input.targetId),
       getRulewiserSettings(),
     ]);
+
+    if (isRuleWiserManagedPost(post.title)) {
+      return c.json<UiResponse>(
+        {
+          showToast: 'RuleWiser dashboard/pre-check posts are not analyzed',
+        },
+        200
+      );
+    }
+
     const analysis = await analyzePost(
       reddit,
       redis,
@@ -91,7 +107,8 @@ menu.post('/reanalyze-post', async (c) => {
     const issueCount =
       analysis.violations.length +
       analysis.titleIssues.length +
-      (analysis.duplicate ? 1 : 0);
+      (analysis.duplicate ? 1 : 0) +
+      (analysis.spamSignals ? 1 : 0);
 
     await savePostData(redis, post.id, { analysis, timestamp: Date.now() });
 
@@ -101,6 +118,10 @@ menu.post('/reanalyze-post', async (c) => {
         author: post.authorName,
         violations: analysis.violations,
         titleIssues: analysis.titleIssues,
+        duplicate: analysis.duplicate,
+        spamSignals: analysis.spamSignals,
+        riskLevel: analysis.riskLevel,
+        classification: analysis.classification,
         score: analysis.overallScore,
       });
     }
@@ -156,11 +177,14 @@ menu.post('/false-positive-post', async (c) => {
 
 menu.post('/dashboard-create', async (c) => {
   try {
-    const post = await createDashboardPost();
+    const { dashboardPost, deletedCount } = await createPinnedRuleWiserPosts(
+      context.subredditName
+    );
 
     return c.json<UiResponse>(
       {
-        navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${post.id}`,
+        showToast: `Pinned latest RuleWiser posts and removed ${deletedCount} old post(s).`,
+        navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${dashboardPost.id}`,
       },
       200
     );

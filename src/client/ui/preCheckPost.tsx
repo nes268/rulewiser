@@ -23,6 +23,12 @@ const getTitleIssueDescription = (
       return 'Avoid all caps because it can look like shouting or spam.';
     case 'clickbait':
       return 'Rewrite the title to describe the post directly.';
+    case 'vague_title':
+      return 'Name the actual topic instead of starting with Help, Question, Problem, or Anyone.';
+    case 'missing_body_context':
+      return 'Add body context or make the title complete enough to stand on its own.';
+    case 'excessive_punctuation':
+      return 'Use normal punctuation so the post does not look urgent, spammy, or low effort.';
   }
 };
 
@@ -41,10 +47,35 @@ const getScoreTone = (score: number) => {
 const getClassificationLabel = (
   classification: PreCheckResponse['classification']
 ) => {
-  return classification
-    .split('_')
-    .map((word) => word[0]?.toUpperCase() + word.slice(1))
-    .join(' ');
+  switch (classification) {
+    case 'clean':
+      return 'Ready to Post';
+    case 'title_quality_risk':
+      return 'Title Needs Work';
+    case 'rule_risk':
+      return 'Rule Risk';
+    case 'duplicate_risk':
+      return 'Duplicate Risk';
+    case 'spam_risk':
+      return 'Spam or Promo Risk';
+  }
+};
+
+const getClassificationDescription = (
+  classification: PreCheckResponse['classification']
+) => {
+  switch (classification) {
+    case 'clean':
+      return 'No major rule, title, spam, or duplicate signals were found.';
+    case 'title_quality_risk':
+      return 'The main issue is how the title/body presents the post, not necessarily the topic itself.';
+    case 'rule_risk':
+      return 'The draft matches one or more community-rule patterns that moderators may review.';
+    case 'duplicate_risk':
+      return 'The topic appears close to a recent stored post and may need a fresher angle.';
+    case 'spam_risk':
+      return 'The draft contains wording that can look promotional, unsafe, or spam-like.';
+  }
 };
 
 const getRiskClasses = (riskLevel: PreCheckResponse['riskLevel']) => {
@@ -164,6 +195,50 @@ const getAiStatusInsight = (aiEnabled: boolean) =>
     ? 'Local rules engine completed.'
     : 'Rules-only fallback completed.';
 
+const getScoreFactorClasses = (
+  tone: PreCheckResponse['scoreBreakdown'][number]['tone']
+) => {
+  switch (tone) {
+    case 'positive':
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-100';
+    case 'warning':
+      return 'border-yellow-500/25 bg-yellow-500/10 text-yellow-100';
+    case 'danger':
+      return 'border-red-500/25 bg-red-500/10 text-red-100';
+  }
+};
+
+const formatScorePoints = (points: number) => {
+  if (points > 0) {
+    return `+${points}`;
+  }
+
+  return points.toString();
+};
+
+const isErrorPayload = (value: unknown): value is { message: string } => {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'message' in value &&
+    typeof value.message === 'string'
+  );
+};
+
+const getPreCheckErrorMessage = async (response: Response): Promise<string> => {
+  try {
+    const payload: unknown = await response.json();
+
+    if (isErrorPayload(payload)) {
+      return payload.message;
+    }
+  } catch {
+    return `Pre-check failed with HTTP ${response.status}.`;
+  }
+
+  return `Pre-check failed with HTTP ${response.status}.`;
+};
+
 const getViolationInsight = (
   violation: PreCheckResponse['violations'][number]
 ) =>
@@ -201,14 +276,18 @@ export const PreCheckPost = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`Pre-check failed with HTTP ${response.status}`);
+        throw new Error(await getPreCheckErrorMessage(response));
       }
 
       const data: PreCheckResponse = await response.json();
       setResult(data);
     } catch (caughtError) {
       console.error('Pre-check failed', caughtError);
-      setError('Could not analyze this draft. Try again in a moment.');
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Could not analyze this draft. Try again in a moment.'
+      );
     } finally {
       setLoading(false);
     }
@@ -315,10 +394,10 @@ export const PreCheckPost = () => {
                 <p
                   className={`text-4xl font-black ${getScoreTone(result.overallScore)}`}
                 >
-                  {result.overallScore}
+                  {result.overallScore}/100
                 </p>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Overall Score
+                  Real Score
                 </p>
               </PreCheckInsightCard>
             </div>
@@ -344,7 +423,67 @@ export const PreCheckPost = () => {
               <p className="mt-3 text-sm leading-6 opacity-90">
                 {result.recommendation}
               </p>
+              <p className="mt-2 text-sm leading-6 opacity-80">
+                {getClassificationDescription(result.classification)}
+              </p>
             </PreCheckInsightCard>
+
+            <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+              <PreCheckInsightCard
+                className="rw-card border-cyan-500/30 bg-cyan-500/10 p-4"
+                delay={0.06}
+                insight="Score math is based on deductions from detected signals, not random numbers."
+              >
+                <h2 className="font-bold text-cyan-100">
+                  Why this score changed
+                </h2>
+                <div className="mt-3 grid gap-2">
+                  {result.scoreBreakdown.map((factor) => (
+                    <div
+                      className={`rounded-xl border p-3 ${getScoreFactorClasses(factor.tone)}`}
+                      key={`${factor.label}-${factor.points}`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-bold">
+                          {factor.label}
+                        </span>
+                        <span className="rounded-full bg-slate-950/35 px-3 py-1 text-xs font-black">
+                          {formatScorePoints(factor.points)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 opacity-85">
+                        {factor.detail}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </PreCheckInsightCard>
+
+              <PreCheckInsightCard
+                className="rw-card border-purple-500/30 bg-purple-500/10 p-4"
+                delay={0.09}
+                insight="These actions change based on the strongest detected situation."
+              >
+                <h2 className="font-bold text-purple-100">
+                  Situation handling
+                </h2>
+                <div className="mt-3 flex flex-col gap-2">
+                  {result.nextSteps.map((step) => (
+                    <div
+                      className="rounded-xl bg-slate-950/45 p-3"
+                      key={step.label}
+                    >
+                      <p className="text-sm font-bold text-purple-100">
+                        {step.label}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-slate-300">
+                        {step.detail}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </PreCheckInsightCard>
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               <PreCheckInsightCard
@@ -572,9 +711,13 @@ export const PreCheckPost = () => {
               </label>
 
               {error ? (
-                <p className="rw-card border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
-                  {error}
-                </p>
+                <div className="rw-card border-red-500/40 bg-red-500/10 p-4 text-red-100">
+                  <p className="text-sm font-bold">Pre-check error</p>
+                  <p className="mt-2 text-sm leading-6">{error}</p>
+                  <p className="mt-2 text-xs leading-5 text-red-100/75">
+                    Nothing was posted. Edit the draft or refresh and try again.
+                  </p>
+                </div>
               ) : null}
 
               <motion.button

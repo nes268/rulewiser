@@ -44,14 +44,29 @@ export const saveViolation = async (
   const existing = await redisClient.get(key);
   const parsed = existing ? parseJson(existing) : [];
   const list = Array.isArray(parsed) ? parsed : [];
+  const postId =
+    typeof violation.postId === 'string' ? violation.postId : undefined;
+  const withoutExistingPost = postId
+    ? list.filter((stored) => {
+        if (
+          typeof stored !== 'object' ||
+          stored === null ||
+          Array.isArray(stored)
+        ) {
+          return true;
+        }
 
-  list.unshift({ ...violation, timestamp: Date.now() });
+        return (stored as Record<string, unknown>).postId !== postId;
+      })
+    : list;
 
-  if (list.length > maxStoredViolations) {
-    list.pop();
+  withoutExistingPost.unshift({ ...violation, timestamp: Date.now() });
+
+  if (withoutExistingPost.length > maxStoredViolations) {
+    withoutExistingPost.pop();
   }
 
-  await redisClient.set(key, JSON.stringify(list));
+  await redisClient.set(key, JSON.stringify(withoutExistingPost));
 };
 
 export const getViolations = async (

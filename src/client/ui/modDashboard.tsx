@@ -138,24 +138,42 @@ const getVolumeInsight = (label: string, count: number) => {
   return `${label}: ${count} stored flag${count === 1 ? '' : 's'}.`;
 };
 
-const getHealthScoreInsight = (score: number) => {
-  if (score >= 85) {
-    return `${score}/100: recent flagged posts were mostly low risk.`;
-  }
-
-  if (score >= 65) {
-    return `${score}/100: watch recent moderation patterns.`;
-  }
-
-  return `${score}/100: recent flags need moderator attention.`;
+const getDashboardHealthInsight = (dashboard: DashboardResponse) => {
+  return dashboard.healthDescription;
 };
 
-const getDashboardHealthInsight = (dashboard: DashboardResponse) => {
-  if (dashboard.totalCount === 0) {
-    return 'No stored flags yet. A health score appears after RuleWiser records real moderation signals.';
+const getHealthLabel = (status: DashboardResponse['healthStatus']) => {
+  switch (status) {
+    case 'no_data':
+      return 'Waiting for data';
+    case 'healthy':
+      return 'Healthy';
+    case 'watch':
+      return 'Watch closely';
+    case 'needs_attention':
+      return 'Needs attention';
+  }
+};
+
+const getHealthScoreText = (dashboard: DashboardResponse) => {
+  if (dashboard.healthStatus === 'no_data') {
+    return 'No data';
   }
 
-  return getHealthScoreInsight(dashboard.healthScore);
+  return `${dashboard.healthScore}/100`;
+};
+
+const getHealthTextClass = (status: DashboardResponse['healthStatus']) => {
+  switch (status) {
+    case 'no_data':
+      return 'text-slate-100';
+    case 'healthy':
+      return 'text-emerald-100';
+    case 'watch':
+      return 'text-yellow-100';
+    case 'needs_attention':
+      return 'text-red-100';
+  }
 };
 
 const getRuleInsight = (
@@ -180,14 +198,55 @@ const getRecentViolationInsight = (
   violation: DashboardResponse['recentViolations'][number]
 ) => {
   if (violation.score < 50) {
-    return `Score ${violation.score}: urgent review.`;
+    return `${violation.primarySignal}: urgent review.`;
   }
+
+  return `${violation.primarySignal}: ${violation.riskLevel} risk.`;
+};
+
+const getRecentSignalText = (
+  violation: DashboardResponse['recentViolations'][number]
+) => {
+  const parts: string[] = [];
 
   if (violation.violationCount > 0) {
-    return `${violation.violationCount} rule flag${violation.violationCount === 1 ? '' : 's'}.`;
+    parts.push(
+      `${violation.violationCount} rule flag${violation.violationCount === 1 ? '' : 's'}`
+    );
   }
 
-  return `${violation.titleIssueCount} title issue${violation.titleIssueCount === 1 ? '' : 's'}.`;
+  if (violation.titleIssueCount > 0) {
+    parts.push(
+      `${violation.titleIssueCount} title warning${violation.titleIssueCount === 1 ? '' : 's'}`
+    );
+  }
+
+  if (violation.duplicateCount > 0) {
+    parts.push('duplicate topic risk');
+  }
+
+  if (violation.spamSignalCount > 0) {
+    parts.push('spam or promotion signal');
+  }
+
+  return parts.length > 0 ? parts.join(', ') : 'stored moderation signal';
+};
+
+const getClassificationLabel = (
+  classification: DashboardResponse['recentViolations'][number]['classification']
+) => {
+  switch (classification) {
+    case 'clean':
+      return 'Clean';
+    case 'title_quality_risk':
+      return 'Title risk';
+    case 'rule_risk':
+      return 'Rule risk';
+    case 'duplicate_risk':
+      return 'Duplicate risk';
+    case 'spam_risk':
+      return 'Spam risk';
+  }
 };
 
 const RuleWiserIntro = () => (
@@ -372,7 +431,7 @@ export const ModDashboard = () => {
             Loading RuleWiser analytics...
           </p>
           <p className="mt-2 text-sm text-slate-400">
-            Pulling live violation data from Redis.
+            Pulling the latest saved moderation signals.
           </p>
         </motion.section>
       </motion.main>
@@ -439,7 +498,7 @@ export const ModDashboard = () => {
             </div>
             <InsightCard
               className="rw-card min-w-44 px-4 py-3 text-sm text-slate-300"
-              insight={`${dashboard.totalCount} stored RuleWiser flag${dashboard.totalCount === 1 ? '' : 's'} synced from Redis.`}
+              insight={`${dashboard.totalCount} stored RuleWiser flag${dashboard.totalCount === 1 ? '' : 's'} synced live.`}
             >
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
@@ -469,16 +528,16 @@ export const ModDashboard = () => {
               insight={getDashboardHealthInsight(dashboard)}
               revealDelay={0.04}
             >
-              <p className="text-4xl font-black text-emerald-100">
-                {dashboard.totalCount === 0
-                  ? 'No flags'
-                  : `${dashboard.healthScore}/100`}
+              <p
+                className={`text-4xl font-black ${getHealthTextClass(dashboard.healthStatus)}`}
+              >
+                {getHealthScoreText(dashboard)}
               </p>
               <p className="mt-1 text-sm font-medium text-slate-400">
-                Community Health
+                {getHealthLabel(dashboard.healthStatus)}
               </p>
               <p className="mt-2 text-xs leading-5 text-slate-500">
-                Based on stored flags from the last 7 days.
+                {dashboard.healthDescription}
               </p>
             </InsightCard>
             <InsightCard
@@ -621,12 +680,17 @@ export const ModDashboard = () => {
                         {formatDate(violation.timestamp)}
                       </p>
                     </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-200">
+                        {violation.primarySignal}
+                      </span>
+                      <span className="rounded-full bg-slate-900/70 px-3 py-1 text-xs font-bold text-slate-300">
+                        {getClassificationLabel(violation.classification)}
+                      </span>
+                    </div>
                     <p className="mt-2 text-sm leading-6 text-slate-300">
-                      RuleWiser found {violation.violationCount} rule flag
-                      {violation.violationCount === 1 ? '' : 's'} and{' '}
-                      {violation.titleIssueCount} title warning
-                      {violation.titleIssueCount === 1 ? '' : 's'}; draft score{' '}
-                      {violation.score}/100.
+                      RuleWiser recorded {getRecentSignalText(violation)}; draft
+                      score {violation.score}/100.
                     </p>
                   </InsightCard>
                 ))}

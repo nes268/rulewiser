@@ -18,6 +18,8 @@ const maxRecentPosts = 100;
 const ruleWiserPostTitles = new Set([
   'check your post before submitting - rulewiser',
   'rulewiser mod dashboard',
+  'rulewiser pre-post check: test your draft before submitting',
+  'rulewiser moderator signal dashboard',
 ]);
 const weakDuplicateWords = new Set([
   'about',
@@ -71,7 +73,14 @@ const getKeywords = (text: string): Set<string> => {
 const shouldSkipDuplicateCheck = (title: string): boolean => {
   const normalized = title.trim().toLowerCase();
 
-  return ruleWiserPostTitles.has(normalized);
+  return (
+    ruleWiserPostTitles.has(normalized) ||
+    (normalized.includes('rulewiser') &&
+      (normalized.includes('dashboard') ||
+        normalized.includes('pre-check') ||
+        normalized.includes('pre-post') ||
+        normalized.includes('check your post')))
+  );
 };
 
 export const checkDuplicate = async (
@@ -106,7 +115,8 @@ export const checkDuplicate = async (
       continue;
     }
 
-    const overlap = intersection.size / Math.max(newKeywords.size, existingKeywords.size);
+    const overlap =
+      intersection.size / Math.max(newKeywords.size, existingKeywords.size);
 
     if (overlap >= 0.65 && intersection.size >= 2) {
       return {
@@ -131,7 +141,8 @@ export const cachePost = async (
 
   const cacheKey = recentPostsKey(subreddit);
   const posts = parseRecentPosts(await redisClient.get(cacheKey)).filter(
-    (recentPost) => recentPost.id !== post.id && !shouldSkipDuplicateCheck(recentPost.title)
+    (recentPost) =>
+      recentPost.id !== post.id && !shouldSkipDuplicateCheck(recentPost.title)
   );
 
   posts.unshift(post);

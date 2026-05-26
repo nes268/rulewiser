@@ -44,13 +44,13 @@ suggested fix.
 
 ### Moderator Dashboard
 
-A live dashboard shows moderation signals from Redis:
+A live dashboard shows saved moderation signals:
 
-- Subreddit Health Score
-- Today / This Week / Total violation counts
-- Top rule and title-warning patterns
-- Repeat violators
-- Recent violation activity
+- Community health status
+- Last 24 hours, 7-day, and total flag counts
+- Top rule, title, duplicate, and spam patterns
+- Repeat flagged authors
+- Recent flagged posts with the exact reason shown
 - Live refresh status and manual refresh
 
 ### Moderator Actions
@@ -66,13 +66,9 @@ RuleWiser adds moderator menu tools:
 
 ## How The Analysis Works
 
-RuleWiser currently uses a local deterministic intelligence engine. It produces
-AI-style explanations, confidence scores, risk labels, and title suggestions
-without depending on paid external AI requests, so the app avoids API cost, rate
-limits, and external service failures.
-
-External AI API integration is planned as a future enhancement once API access is
-approved and reliable for production use.
+RuleWiser reads the draft the way a moderator would: it looks at the title, the
+body, the community rules, and recent post patterns together. The result is a
+clear score, a risk label, the reason behind the score, and practical next steps.
 
 ### 1. Title Quality Checks
 
@@ -105,13 +101,16 @@ Each match includes a confidence score, explanation, and suggested fix.
 
 ### 3. Duplicate-Risk Detection
 
-Recent post titles are cached in Redis. New titles are compared against recent
-titles using keyword overlap to identify likely reposts or repeated questions.
+Recent post titles are compared against new submissions to identify likely
+reposts or repeated questions. RuleWiser-managed app posts are ignored so the
+dashboard stays focused on real community posts.
 
-### 4. Analytics And Rollups
+### 4. Score And Dashboard
 
-Detected issues are stored in Redis for dashboard reporting. A scheduled daily
-rollup stores summary analytics for trend tracking.
+When a post is flagged, RuleWiser saves the visible reason with the score. The
+dashboard only shows records that have an actual signal, groups repeated checks
+for the same post, and labels each recent item with the main reason it was
+flagged.
 
 ---
 
@@ -215,6 +214,8 @@ Implemented:
 - Duplicate-risk detection
 - Live moderator dashboard
 - Health score
+- Score breakdown and situation-specific next steps
+- Recent flagged posts with visible rule, title, duplicate, or spam reasons
 - Repeat violator reporting
 - Re-analyze menu action
 - False-positive menu action

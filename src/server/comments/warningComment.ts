@@ -11,10 +11,18 @@ const getTitleIssueMessage = (issue: TitleIssue): string => {
       return 'Your title is written in all caps, which can look like shouting or spam.';
     case 'clickbait':
       return 'Your title contains clickbait phrasing. Rewrite it to describe the post directly.';
+    case 'vague_title':
+      return 'Your title starts too vaguely. Add the exact topic or situation so readers know what the post is about.';
+    case 'missing_body_context':
+      return 'Your post does not include enough title/body context. Add what happened, what you tried, and what help you want.';
+    case 'excessive_punctuation':
+      return 'Your title uses excessive punctuation, which can make it look urgent, spammy, or low effort.';
   }
 };
 
-const getClassificationLabel = (classification: PostAnalysis['classification']) => {
+const getClassificationLabel = (
+  classification: PostAnalysis['classification']
+) => {
   return classification
     .split('_')
     .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
