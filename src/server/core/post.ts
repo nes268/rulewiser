@@ -1,13 +1,14 @@
 import { reddit } from '@devvit/web/server';
 
-export const preCheckPostTitle = 'Check Your Post Before Submitting - RuleWiser';
-export const dashboardPostTitle = 'RuleWiser Mod Dashboard';
+export const preCheckPostTitle =
+  'RuleWiser Pre-Post Check: Test Your Draft Before Submitting';
+export const dashboardPostTitle = 'RuleWiser Moderator Signal Dashboard';
 
 export const createPreCheckPost = async () => {
   return await reddit.submitCustomPost({
     title: preCheckPostTitle,
     textFallback: {
-      text: 'Open this post to pre-check a draft against the subreddit rules before publishing.',
+      text: 'Open this post to paste a draft title and body, then get specific rule, duplicate, spam, and title-quality feedback before publishing.',
     },
   });
 };
@@ -17,7 +18,7 @@ export const createDashboardPost = async () => {
     title: dashboardPostTitle,
     entry: 'dashboard',
     textFallback: {
-      text: 'Moderator dashboard for live RuleWiser violation data.',
+      text: 'Open this post to review live RuleWiser moderation signals from stored warnings, strict-mode actions, duplicate checks, and title-quality issues.',
     },
   });
 };
@@ -36,12 +37,15 @@ const isRuleWiserManagedPost = (title: string) => {
     normalizedTitle.includes('rulewiser') &&
     (normalizedTitle.includes('dashboard') ||
       normalizedTitle.includes('pre-check') ||
+      normalizedTitle.includes('pre-post') ||
       normalizedTitle.includes('precheck') ||
       normalizedTitle.includes('check your post'))
   );
 };
 
-const deleteOldPost = async (post: Awaited<ReturnType<typeof createPreCheckPost>>) => {
+const deleteOldPost = async (
+  post: Awaited<ReturnType<typeof createPreCheckPost>>
+) => {
   try {
     await post.unsticky();
   } catch {
@@ -51,7 +55,10 @@ const deleteOldPost = async (post: Awaited<ReturnType<typeof createPreCheckPost>
   try {
     await post.delete();
   } catch (deleteError) {
-    console.error(`Could not delete old RuleWiser post ${post.id}:`, deleteError);
+    console.error(
+      `Could not delete old RuleWiser post ${post.id}:`,
+      deleteError
+    );
     await post.remove(false);
   }
 };

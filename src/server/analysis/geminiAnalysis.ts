@@ -172,7 +172,10 @@ const getPromotionSignals = (title: string, body: string): TextSignal[] => {
     'https://',
   ]);
 
-  if (suspiciousLink && (hardPromo || softPromo || /free|deal|offer/i.test(fullText))) {
+  if (
+    suspiciousLink &&
+    (hardPromo || softPromo || /free|deal|offer/i.test(fullText))
+  ) {
     signals.push({
       matched: suspiciousLink,
       confidence: 86,
@@ -335,7 +338,10 @@ const detectRuleSpecificViolations = (
     });
   }
 
-  if (ruleText.includes('account age') || ruleText.includes('karma requirement')) {
+  if (
+    ruleText.includes('account age') ||
+    ruleText.includes('karma requirement')
+  ) {
     addViolation(violations, {
       rule: ruleName,
       confidence: 60,
@@ -372,7 +378,10 @@ const detectRuleSpecificViolations = (
     }
   }
 
-  if (ruleText.includes('body required') && fullText.trim().split(/\s+/).length < 12) {
+  if (
+    ruleText.includes('body required') &&
+    fullText.trim().split(/\s+/).length < 12
+  ) {
     addViolation(violations, {
       rule: ruleName,
       confidence: 75,
@@ -399,7 +408,9 @@ const getTitleWarnings = (title: string, body: string): string[] => {
   }
 
   if (trimmedTitle.length > 250) {
-    warnings.push('Title is very long - shorten it and move detail into the body.');
+    warnings.push(
+      'Title is very long - shorten it and move detail into the body.'
+    );
   }
 
   if (trimmedTitle === trimmedTitle.toUpperCase() && trimmedTitle.length > 8) {
@@ -410,18 +421,28 @@ const getTitleWarnings = (title: string, body: string): string[] => {
     warnings.push('Avoid excessive punctuation like !! or ??.');
   }
 
-  if (/^(help|question|issue|problem|anyone|pls|please help)\b/i.test(trimmedTitle)) {
+  if (
+    /^(help|question|issue|problem|anyone|pls|please help)\b/i.test(
+      trimmedTitle
+    )
+  ) {
     warnings.push(
       'Starting with vague words like "Help" or "Question" makes titles unclear.'
     );
   }
 
-  if (/click here|you won't believe|must see|gone wrong|shocking/i.test(trimmedTitle)) {
+  if (
+    /click here|you won't believe|must see|gone wrong|shocking/i.test(
+      trimmedTitle
+    )
+  ) {
     warnings.push('Title appears clickbait-style. Be specific and honest.');
   }
 
   if (bodyWordCount === 0 && titleWordCount < 7) {
-    warnings.push('Post has little body context, so the title must be more complete.');
+    warnings.push(
+      'Post has little body context, so the title must be more complete.'
+    );
   }
 
   return warnings;
@@ -460,37 +481,164 @@ const getTitleQuality = (warnings: string[]): number => {
   return Math.max(0, 100 - penalty);
 };
 
+const commonTopicWords = new Set([
+  'about',
+  'after',
+  'again',
+  'because',
+  'before',
+  'could',
+  'draft',
+  'having',
+  'please',
+  'question',
+  'really',
+  'should',
+  'someone',
+  'there',
+  'thing',
+  'things',
+  'trying',
+  'would',
+]);
+
+const countWords = (value: string): number =>
+  value.trim().split(/\s+/).filter(Boolean).length;
+
+const sentenceCase = (value: string): string => {
+  const cleaned = value.trim();
+
+  if (cleaned.length === 0) {
+    return '';
+  }
+
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+};
+
+const trimTitlePunctuation = (value: string): string =>
+  value
+    .trim()
+    .replace(/[.!?,:;-]+$/g, '')
+    .trim();
+
+const getSuggestionKey = (value: string): string =>
+  trimTitlePunctuation(value).replace(/\s+/g, ' ').toLowerCase();
+
+const addTitleSuggestion = (
+  suggestions: string[],
+  suggestion: string
+): void => {
+  const cleaned = sentenceCase(suggestion).replace(/\s+/g, ' ').trim();
+
+  if (cleaned.length < 8) {
+    return;
+  }
+
+  const normalized = getSuggestionKey(cleaned);
+  const alreadyAdded = suggestions.some(
+    (existing) => getSuggestionKey(existing) === normalized
+  );
+
+  if (!alreadyAdded) {
+    suggestions.push(cleaned);
+  }
+};
+
 const cleanTitleForSuggestion = (title: string): string => {
   let improved = title.trim();
 
   if (improved === improved.toUpperCase() && improved.length > 5) {
-    improved = improved.charAt(0).toUpperCase() + improved.slice(1).toLowerCase();
+    improved =
+      improved.charAt(0).toUpperCase() + improved.slice(1).toLowerCase();
   }
 
   improved = improved.replace(/!{2,}/g, '!').replace(/\?{2,}/g, '?');
   improved = improved
-    .replace(/^help\s*[-:,]?\s*/i, '')
-    .replace(/^question\s*[-:,]?\s*/i, '')
-    .replace(/^issue\s*[-:,]?\s*/i, '')
-    .replace(/^problem\s*[-:,]?\s*/i, '')
-    .replace(/^pls\s*/i, '')
-    .replace(/^please help\s*[-:,]?\s*/i, '');
+    .replace(/^(help|question|issue|problem|anyone|pls)\s*[-:,]\s*/i, '')
+    .replace(/^please help\s*[-:,]?\s*/i, '')
+    .replace(/^(click here|must see|shocking)\s*[-:,]?\s*/i, '')
+    .replace(/\byou won't believe\b/gi, '')
+    .replace(/\bgone wrong\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-  return improved.length > 0
-    ? improved.charAt(0).toUpperCase() + improved.slice(1)
-    : 'Clear question about this topic';
+  if (
+    /^(help|question|issue|problem|anyone|pls|please help)$/i.test(improved)
+  ) {
+    improved = '';
+  }
+
+  return sentenceCase(trimTitlePunctuation(improved));
 };
 
-const getBodyTopic = (body: string): string => {
-  const keywords = body
+const getReadableSnippet = (value: string): string => {
+  const cleaned = value
+    .replace(/https?:\/\/\S+/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (cleaned.length === 0) {
+    return '';
+  }
+
+  const sentence = cleaned
+    .split(/[.!?]/)
+    .map((part) => part.trim())
+    .find((part) => countWords(part) >= 4);
+  const source = sentence ?? cleaned;
+
+  return trimTitlePunctuation(source.split(/\s+/).slice(0, 11).join(' '));
+};
+
+const getKeywordTopic = (value: string): string => {
+  const keywords = value
     .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, '')
+    .replace(/https?:\/\/\S+/gi, '')
+    .replace(/[^a-z0-9 ]/g, ' ')
     .split(/\s+/)
-    .filter((word) => word.length > 5)
-    .slice(0, 4);
+    .filter((word) => word.length > 4 && !commonTopicWords.has(word))
+    .slice(0, 5);
 
-  return keywords.length > 0 ? keywords.join(' ') : 'the specific issue';
+  return keywords.length > 0 ? keywords.join(' ') : 'this post';
 };
+
+const getDraftTopic = (title: string, body: string): string => {
+  const cleanedTitle = cleanTitleForSuggestion(title);
+
+  if (countWords(cleanedTitle) >= 4 && cleanedTitle.length >= 18) {
+    return trimTitlePunctuation(cleanedTitle);
+  }
+
+  const bodySnippet = getReadableSnippet(body);
+
+  if (bodySnippet.length > 0) {
+    return bodySnippet;
+  }
+
+  if (cleanedTitle.length > 0) {
+    return trimTitlePunctuation(cleanedTitle);
+  }
+
+  return getKeywordTopic(`${title} ${body}`);
+};
+
+const getQuestionSuggestion = (topic: string, keywordTopic: string): string => {
+  const cleanedTopic = trimTitlePunctuation(topic);
+
+  if (
+    /^(how|what|where|when|why|can|should|does|do|is|are)\b/i.test(cleanedTopic)
+  ) {
+    return `${sentenceCase(cleanedTopic)}?`;
+  }
+
+  return `What should I do next about ${keywordTopic}?`;
+};
+
+const getAdviceSuggestion = (topic: string): string =>
+  `Need advice: ${sentenceCase(trimTitlePunctuation(topic))}`;
+
+const getContextSuggestion = (keywordTopic: string): string =>
+  `Help with ${keywordTopic}: what happened and what I tried`;
 
 const generateTitleSuggestions = (
   title: string,
@@ -500,29 +648,39 @@ const generateTitleSuggestions = (
   const suggestions: string[] = [];
   const cleaned = cleanTitleForSuggestion(title);
   const titleWordCount = title.trim().split(/\s+/).filter(Boolean).length;
-  const hasPromoViolation = violations.some((violation) =>
-    violation.rule.toLowerCase().includes('promo') ||
-    violation.rule.toLowerCase().includes('spam') ||
-    violation.explanation.toLowerCase().includes('promotion')
+  const draftTopic = getDraftTopic(title, body);
+  const keywordTopic = getKeywordTopic(`${title} ${body}`);
+  const hasPromoViolation = violations.some(
+    (violation) =>
+      violation.rule.toLowerCase().includes('promo') ||
+      violation.rule.toLowerCase().includes('spam') ||
+      violation.explanation.toLowerCase().includes('promotion')
   );
 
-  if (cleaned !== title.trim() && cleaned.length > 5) {
-    suggestions.push(cleaned);
+  if (cleaned !== title.trim() && countWords(cleaned) >= 3) {
+    addTitleSuggestion(suggestions, cleaned);
   }
 
   if (hasPromoViolation) {
-    suggestions.push(`Discussion: what I learned about ${getBodyTopic(body)}`);
+    addTitleSuggestion(
+      suggestions,
+      `Discussion: what I learned about ${keywordTopic}`
+    );
   }
 
   if (titleWordCount < 4 && title.length < 40) {
-    suggestions.push(`${cleaned} - context, details, and question`);
-    suggestions.push(`Discussion: ${cleaned}`);
+    addTitleSuggestion(suggestions, getAdviceSuggestion(draftTopic));
+    addTitleSuggestion(
+      suggestions,
+      getQuestionSuggestion(draftTopic, keywordTopic)
+    );
+    addTitleSuggestion(suggestions, getContextSuggestion(keywordTopic));
   } else if (title.length > 100) {
     const shortened = cleaned.split(/\s+/).slice(0, 12).join(' ');
-    suggestions.push(shortened);
+    addTitleSuggestion(suggestions, shortened);
   }
 
-  return [...new Set(suggestions)].slice(0, 3);
+  return suggestions.slice(0, 3);
 };
 
 const checkSpamSignals = (signals: TextSignal[]): boolean =>
@@ -577,7 +735,11 @@ const smartAnalyze = (
 
   const titleWarnings = getTitleWarnings(title, body || '');
   const titleQuality = getTitleQuality(titleWarnings);
-  const suggestedTitles = generateTitleSuggestions(title, body || '', violations);
+  const suggestedTitles = generateTitleSuggestions(
+    title,
+    body || '',
+    violations
+  );
   const spamSignals = checkSpamSignals(signals);
   const overallScore = clampScore(
     100 -
@@ -586,7 +748,8 @@ const smartAnalyze = (
         0
       ) -
       titleWarnings.reduce(
-        (total, warning) => total + Math.round(getTitleWarningPenalty(warning) * 0.55),
+        (total, warning) =>
+          total + Math.round(getTitleWarningPenalty(warning) * 0.55),
         0
       ) -
       (spamSignals ? 16 : 0)

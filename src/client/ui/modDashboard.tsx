@@ -128,26 +128,34 @@ const InsightCard = ({
 
 const getVolumeInsight = (label: string, count: number) => {
   if (count === 0) {
-    return `${label}: no stored hits.`;
+    return `${label}: no RuleWiser flags stored for this period.`;
   }
 
   if (count >= 10) {
-    return `${label}: ${count} hits, heavy activity.`;
+    return `${label}: ${count} stored flags. Review the recurring patterns.`;
   }
 
-  return `${label}: ${count} hit${count === 1 ? '' : 's'}.`;
+  return `${label}: ${count} stored flag${count === 1 ? '' : 's'}.`;
 };
 
 const getHealthScoreInsight = (score: number) => {
   if (score >= 85) {
-    return `${score}/100: healthy.`;
+    return `${score}/100: recent flagged posts were mostly low risk.`;
   }
 
   if (score >= 65) {
-    return `${score}/100: watch trends.`;
+    return `${score}/100: watch recent moderation patterns.`;
   }
 
-  return `${score}/100: needs attention.`;
+  return `${score}/100: recent flags need moderator attention.`;
+};
+
+const getDashboardHealthInsight = (dashboard: DashboardResponse) => {
+  if (dashboard.totalCount === 0) {
+    return 'No stored flags yet. A health score appears after RuleWiser records real moderation signals.';
+  }
+
+  return getHealthScoreInsight(dashboard.healthScore);
 };
 
 const getRuleInsight = (
@@ -162,10 +170,10 @@ const getRepeatViolatorInsight = (
   violator: DashboardResponse['repeatViolators'][number]
 ) => {
   if (violator.count >= 3) {
-    return `u/${violator.username}: ${violator.count} hits. Review.`;
+    return `u/${violator.username}: ${violator.count} stored flags. Review the pattern.`;
   }
 
-  return `u/${violator.username}: repeat signal.`;
+  return `u/${violator.username}: repeat RuleWiser signal.`;
 };
 
 const getRecentViolationInsight = (
@@ -176,7 +184,7 @@ const getRecentViolationInsight = (
   }
 
   if (violation.violationCount > 0) {
-    return `${violation.violationCount} AI flag${violation.violationCount === 1 ? '' : 's'}.`;
+    return `${violation.violationCount} rule flag${violation.violationCount === 1 ? '' : 's'}.`;
   }
 
   return `${violation.titleIssueCount} title issue${violation.titleIssueCount === 1 ? '' : 's'}.`;
@@ -419,11 +427,11 @@ export const ModDashboard = () => {
             <div>
               <p className="rw-kicker">RuleWiser</p>
               <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
-                Analytics Dashboard
+                Moderator Signal Dashboard
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
-                Live moderation signals from RuleWiser comments, strict-mode
-                removals, duplicate checks, and title quality warnings.
+                Real counts from stored RuleWiser warnings, strict-mode actions,
+                duplicate checks, and title-quality issues.
               </p>
               <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-orange-200">
                 Hover or focus any card for deeper insights
@@ -431,7 +439,7 @@ export const ModDashboard = () => {
             </div>
             <InsightCard
               className="rw-card min-w-44 px-4 py-3 text-sm text-slate-300"
-              insight={`${dashboard.totalCount} total hit${dashboard.totalCount === 1 ? '' : 's'} synced live.`}
+              insight={`${dashboard.totalCount} stored RuleWiser flag${dashboard.totalCount === 1 ? '' : 's'} synced from Redis.`}
             >
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
@@ -443,7 +451,10 @@ export const ModDashboard = () => {
                   disabled={refreshing}
                   onClick={() => void loadDashboard(false)}
                   type="button"
-                  whileHover={{ scale: refreshing ? 1 : 1.02, y: refreshing ? 0 : -1 }}
+                  whileHover={{
+                    scale: refreshing ? 1 : 1.02,
+                    y: refreshing ? 0 : -1,
+                  }}
                   whileTap={{ scale: refreshing ? 1 : 0.98 }}
                 >
                   {refreshing ? 'Refreshing...' : 'Refresh now'}
@@ -455,14 +466,19 @@ export const ModDashboard = () => {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <InsightCard
               className="rw-metric rw-card-hover p-5"
-              insight={getHealthScoreInsight(dashboard.healthScore)}
+              insight={getDashboardHealthInsight(dashboard)}
               revealDelay={0.04}
             >
               <p className="text-4xl font-black text-emerald-100">
-                {dashboard.healthScore}
+                {dashboard.totalCount === 0
+                  ? 'No flags'
+                  : `${dashboard.healthScore}/100`}
               </p>
               <p className="mt-1 text-sm font-medium text-slate-400">
-                Health Score
+                Community Health
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Based on stored flags from the last 7 days.
               </p>
             </InsightCard>
             <InsightCard
@@ -473,7 +489,12 @@ export const ModDashboard = () => {
               <p className="text-4xl font-black text-orange-100">
                 {dashboard.todayCount}
               </p>
-              <p className="mt-1 text-sm font-medium text-slate-400">Today</p>
+              <p className="mt-1 text-sm font-medium text-slate-400">
+                Last 24 Hours
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                New RuleWiser flags since yesterday.
+              </p>
             </InsightCard>
             <InsightCard
               className="rw-metric rw-card-hover p-5"
@@ -484,7 +505,10 @@ export const ModDashboard = () => {
                 {dashboard.weekCount}
               </p>
               <p className="mt-1 text-sm font-medium text-slate-400">
-                This Week
+                7-Day Flags
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Recent warnings and title issues.
               </p>
             </InsightCard>
             <InsightCard
@@ -495,7 +519,12 @@ export const ModDashboard = () => {
               <p className="text-4xl font-black text-emerald-100">
                 {dashboard.totalCount}
               </p>
-              <p className="mt-1 text-sm font-medium text-slate-400">Total</p>
+              <p className="mt-1 text-sm font-medium text-slate-400">
+                Stored Flags
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                All retained RuleWiser records.
+              </p>
             </InsightCard>
           </div>
 
@@ -507,7 +536,7 @@ export const ModDashboard = () => {
           >
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-bold text-slate-100">
-                Top Rule Violations
+                Most Common Signals
               </h2>
               <span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-200">
                 This week
@@ -536,7 +565,7 @@ export const ModDashboard = () => {
                 className="mt-4 rounded-xl bg-slate-950/55 p-4 text-sm text-slate-400"
                 insight="This week: no rule hits."
               >
-                No stored violations this week yet.
+                No stored RuleWiser flags this week yet.
               </InsightCard>
             )}
           </motion.section>
@@ -549,7 +578,7 @@ export const ModDashboard = () => {
               transition={{ delay: 0.28 }}
             >
               <h2 className="text-lg font-bold text-yellow-100">
-                Repeat Violators
+                Repeat Flagged Authors
               </h2>
               <div className="mt-4 flex flex-col gap-2">
                 {dashboard.repeatViolators.map((violator) => (
@@ -560,7 +589,7 @@ export const ModDashboard = () => {
                   >
                     <span className="font-medium">u/{violator.username}</span>
                     <span className="rounded-full bg-yellow-500/10 px-3 py-1 text-sm font-bold text-yellow-200">
-                      {violator.count} violation
+                      {violator.count} flag
                       {violator.count === 1 ? '' : 's'}
                     </span>
                   </InsightCard>
@@ -576,7 +605,7 @@ export const ModDashboard = () => {
             transition={{ delay: 0.32 }}
           >
             <h2 className="text-lg font-bold text-slate-100">
-              Recent Violations
+              Recent Flagged Posts
             </h2>
             {dashboard.recentViolations.length > 0 ? (
               <div className="mt-4 grid gap-3">
@@ -593,9 +622,11 @@ export const ModDashboard = () => {
                       </p>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-slate-300">
-                      {violation.violationCount} AI violation(s),{' '}
-                      {violation.titleIssueCount} title issue(s), score{' '}
-                      {violation.score}/100
+                      RuleWiser found {violation.violationCount} rule flag
+                      {violation.violationCount === 1 ? '' : 's'} and{' '}
+                      {violation.titleIssueCount} title warning
+                      {violation.titleIssueCount === 1 ? '' : 's'}; draft score{' '}
+                      {violation.score}/100.
                     </p>
                   </InsightCard>
                 ))}
@@ -605,7 +636,7 @@ export const ModDashboard = () => {
                 className="mt-4 rounded-xl bg-slate-950/55 p-4 text-sm text-slate-400"
                 insight="Recent queue: clear."
               >
-                RuleWiser has not stored any violations yet.
+                RuleWiser has not stored any flagged posts yet.
               </InsightCard>
             )}
           </motion.section>

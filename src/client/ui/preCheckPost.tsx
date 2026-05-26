@@ -160,19 +160,20 @@ const getTitleQualityInsight = (quality: number) => {
 };
 
 const getAiStatusInsight = (aiEnabled: boolean) =>
-  aiEnabled ? 'AI + rules ran.' : 'Rules only fallback.';
+  aiEnabled
+    ? 'Local rules engine completed.'
+    : 'Rules-only fallback completed.';
 
 const getViolationInsight = (
   violation: PreCheckResponse['violations'][number]
 ) =>
   `${violation.confidence}%: ${violation.suggestion ? 'fix available' : 'manual review'}.`;
 
-const getTitleIssueInsight = (
-  issue: PreCheckResponse['titleIssues'][number]
-) => `${issue.confidence}%: ${getTitleIssueLabel(issue.type)}.`;
+const getTitleIssueInsight = (issue: PreCheckResponse['titleIssues'][number]) =>
+  `${issue.confidence}%: ${getTitleIssueLabel(issue.type)}.`;
 
 const getSuggestedTitlesInsight = (count: number) =>
-  `${count} rewrite option${count === 1 ? '' : 's'}.`;
+  `${count} rewrite option${count === 1 ? '' : 's'} based on this draft.`;
 
 const loadingDots = [0, 1, 2];
 
@@ -264,7 +265,9 @@ export const PreCheckPost = () => {
 
   if (result) {
     const issueCount =
-      result.violations.length + result.titleIssues.length + (result.spamSignals ? 1 : 0);
+      result.violations.length +
+      result.titleIssues.length +
+      (result.spamSignals ? 1 : 0);
 
     return (
       <motion.main
@@ -298,18 +301,20 @@ export const PreCheckPost = () => {
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
                   {result.aiEnabled
-                    ? 'AI and deterministic checks reviewed this draft.'
-                    : 'Deterministic checks reviewed this draft while AI is unavailable.'}
+                    ? 'The local rules engine reviewed this draft.'
+                    : 'RuleWiser reviewed this draft with fallback checks.'}
                 </p>
                 <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-orange-200">
-                  Hover or focus any result card for a quick read
+                  Hover or focus any result card to see why it matters
                 </p>
               </div>
               <PreCheckInsightCard
                 className="rw-metric min-w-36 p-4 text-center"
                 insight={getOverallScoreInsight(result.overallScore)}
               >
-                <p className={`text-4xl font-black ${getScoreTone(result.overallScore)}`}>
+                <p
+                  className={`text-4xl font-black ${getScoreTone(result.overallScore)}`}
+                >
                   {result.overallScore}
                 </p>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -347,7 +352,9 @@ export const PreCheckPost = () => {
                 delay={0.08}
                 insight={getSignalCountInsight(issueCount)}
               >
-                <p className="text-2xl font-black text-slate-100">{issueCount}</p>
+                <p className="text-2xl font-black text-slate-100">
+                  {issueCount}
+                </p>
                 <p className="text-sm text-slate-400">Signals found</p>
               </PreCheckInsightCard>
               <PreCheckInsightCard
@@ -366,9 +373,9 @@ export const PreCheckPost = () => {
                 insight={getAiStatusInsight(result.aiEnabled)}
               >
                 <p className="text-2xl font-black text-slate-100">
-                  {result.aiEnabled ? 'On' : 'Fallback'}
+                  {result.aiEnabled ? 'Local' : 'Fallback'}
                 </p>
-                <p className="text-sm text-slate-400">AI status</p>
+                <p className="text-sm text-slate-400">Analysis mode</p>
               </PreCheckInsightCard>
             </div>
 
@@ -431,12 +438,22 @@ export const PreCheckPost = () => {
               <PreCheckInsightCard
                 className="rw-card border-emerald-500/30 bg-emerald-500/10 p-4"
                 delay={0.12}
-                insight={getSuggestedTitlesInsight(result.suggestedTitles.length)}
+                insight={getSuggestedTitlesInsight(
+                  result.suggestedTitles.length
+                )}
               >
-                <h2 className="font-bold text-emerald-100">Suggested Titles</h2>
+                <h2 className="font-bold text-emerald-100">
+                  Stronger title options
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-emerald-50/80">
+                  These use the topic from your draft instead of generic filler.
+                </p>
                 <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-200">
                   {result.suggestedTitles.map((suggestedTitle) => (
-                    <li className="rounded-lg bg-slate-950/45 p-3" key={suggestedTitle}>
+                    <li
+                      className="rounded-lg bg-slate-950/45 p-3"
+                      key={suggestedTitle}
+                    >
                       {suggestedTitle}
                     </li>
                   ))}
@@ -444,7 +461,8 @@ export const PreCheckPost = () => {
               </PreCheckInsightCard>
             ) : null}
 
-            {result.violations.length === 0 && result.titleIssues.length === 0 ? (
+            {result.violations.length === 0 &&
+            result.titleIssues.length === 0 ? (
               <PreCheckInsightCard
                 className="rw-card border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-100"
                 insight={`Score ${result.overallScore}: no major flags.`}
@@ -460,7 +478,7 @@ export const PreCheckPost = () => {
               onClick={() => setResult(null)}
               type="button"
             >
-              Check Another Post
+              Check another draft
             </motion.button>
           </motion.div>
         </section>
@@ -497,26 +515,28 @@ export const PreCheckPost = () => {
               <div>
                 <p className="rw-kicker">RuleWiser</p>
                 <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
-                  Pre-Check Studio
+                  Pre-Post Check
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
-                  Polish your post before it hits the queue. RuleWiser checks
-                  title quality, subreddit rules, duplicate risk, and AI
-                  moderation signals.
+                  Test a real draft before it hits the queue. RuleWiser reads
+                  the title and body together, then points out rule, duplicate,
+                  spam, and title-quality risks.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 text-xs font-bold text-slate-200">
-                {['Rule Scan', 'Title Check', 'Risk Score'].map((label, index) => (
-                  <motion.span
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-full border border-orange-300/25 bg-slate-950/45 px-4 py-2 shadow-sm shadow-orange-950/20"
-                    initial={{ opacity: 0, y: 10 }}
-                    key={label}
-                    transition={{ delay: 0.08 + index * 0.05 }}
-                  >
-                    {label}
-                  </motion.span>
-                ))}
+                {['Rule scan', 'Title clarity', 'Posting risk'].map(
+                  (label, index) => (
+                    <motion.span
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-full border border-orange-300/25 bg-slate-950/45 px-4 py-2 shadow-sm shadow-orange-950/20"
+                      initial={{ opacity: 0, y: 10 }}
+                      key={label}
+                      transition={{ delay: 0.08 + index * 0.05 }}
+                    >
+                      {label}
+                    </motion.span>
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -525,7 +545,7 @@ export const PreCheckPost = () => {
             <div className="flex flex-col gap-4">
               <label className="rw-card rw-card-hover flex flex-col gap-2 p-4">
                 <span className="flex items-center justify-between gap-3 text-sm font-bold text-slate-200">
-                  Post Title
+                  Draft title
                   <span className="text-xs font-semibold text-slate-500">
                     Required
                   </span>
@@ -533,19 +553,20 @@ export const PreCheckPost = () => {
                 <input
                   className="rw-field px-4 py-3"
                   onChange={(event) => setTitle(event.target.value)}
-                  placeholder="Type your planned post title here..."
+                  placeholder="Example: Need advice on fixing a Vite deploy error"
                   value={title}
                 />
               </label>
 
               <label className="rw-card rw-card-hover flex flex-col gap-2 p-4">
                 <span className="text-sm font-bold text-slate-200">
-                  Post Body <span className="font-medium text-slate-500">(optional)</span>
+                  Draft body{' '}
+                  <span className="font-medium text-slate-500">(optional)</span>
                 </span>
                 <textarea
                   className="rw-field min-h-44 resize-none px-4 py-3"
                   onChange={(event) => setBody(event.target.value)}
-                  placeholder="Paste your post body here..."
+                  placeholder="Add the context moderators need: what happened, what you tried, and what help you want."
                   value={body}
                 />
               </label>
@@ -564,7 +585,7 @@ export const PreCheckPost = () => {
                 onClick={() => void handleAnalyze()}
                 type="button"
               >
-                Analyze My Post
+                Analyze my draft
               </motion.button>
             </div>
 
@@ -576,7 +597,7 @@ export const PreCheckPost = () => {
             >
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">
-                  What you get
+                  What RuleWiser checks
                 </p>
                 <div className="mt-4 flex flex-col gap-3 text-sm leading-6 text-slate-300">
                   <PreCheckInsightCard
@@ -584,21 +605,21 @@ export const PreCheckPost = () => {
                     delay={0.16}
                     insight="Rule hits explain which subreddit expectation might be broken and how confident RuleWiser is."
                   >
-                    Rule-specific warnings with confidence scores.
+                    Rule-specific warnings tied to the draft.
                   </PreCheckInsightCard>
                   <PreCheckInsightCard
                     className="rounded-2xl border border-slate-700/70 bg-slate-950/45 p-3"
                     delay={0.22}
                     insight="Title checks catch wording that can look spammy, vague, clickbait, or too loud."
                   >
-                    Title quality checks for spammy or vague wording.
+                    Title clarity checks for vague, loud, or clickbait wording.
                   </PreCheckInsightCard>
                   <PreCheckInsightCard
                     className="rounded-2xl border border-slate-700/70 bg-slate-950/45 p-3"
                     delay={0.28}
                     insight="Suggestions are meant to help you fix the post before moderators need to intervene."
                   >
-                    Suggestions to rewrite before moderators ever see it.
+                    Title rewrites that use your actual topic and body context.
                   </PreCheckInsightCard>
                 </div>
               </div>
@@ -609,7 +630,8 @@ export const PreCheckPost = () => {
                 transition={{ delay: 0.35, duration: 0.3 }}
               >
                 <p className="text-sm font-semibold text-orange-100">
-                  Tip: try a real title and body. Better context gives better analysis.
+                  Tip: paste the same title and body you plan to submit. More
+                  context makes the result feel less generic.
                 </p>
               </motion.div>
             </motion.aside>
