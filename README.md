@@ -6,7 +6,13 @@ RuleWiser is a Devvit Web app that helps Reddit users understand subreddit rules
 before they post, while giving moderators a live view of recurring rule issues,
 duplicate patterns, and community health.
 
-**App page:** https://developers.reddit.com/apps/rulewiserr
+## Links
+
+| Resource | Description |
+| --- | --- |
+| [Live app](https://developers.reddit.com/apps/rulewiserr) | Install and try RuleWiser on Reddit |
+| [Presentation](https://drive.google.com/file/d/1SDGqHUroe3Gx8VGqNB9FZB2OUcHhpqzA/view?usp=sharing) | Project overview deck (PDF) |
+| [Documentation](https://drive.google.com/file/d/1uOtZxP5OJ1emqVB7kcE5OEBsxe1KInuJ/view?usp=sharing) | Full project documentation (PDF) |
 
 ---
 

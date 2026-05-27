@@ -208,8 +208,16 @@ In development / future plans:
 
 ---
 
+## Links
+
+| Resource | Link |
+| --- | --- |
+| Live app | [RuleWiser on Reddit](https://developers.reddit.com/apps/rulewiserr) |
+| Presentation | [rulewiser_presentation.pdf](https://drive.google.com/file/d/1SDGqHUroe3Gx8VGqNB9FZB2OUcHhpqzA/view?usp=sharing) |
+| Documentation | [RuleWiser_Documentation.pdf](https://drive.google.com/file/d/1uOtZxP5OJ1emqVB7kcE5OEBsxe1KInuJ/view?usp=sharing) |
+
 ## Try It
 
-**App:** https://developers.reddit.com/apps/rulewiserr
+Install [RuleWiser](https://developers.reddit.com/apps/rulewiserr) on a subreddit you moderate. The app creates the Pre-Check post and Mod Dashboard, then starts analyzing new posts through Devvit triggers.
 
-Install RuleWiser on a subreddit you moderate. The app creates the Pre-Check post and Mod Dashboard, then starts analyzing new posts through Devvit triggers.
+For a quick overview, see the [presentation deck](https://drive.google.com/file/d/1SDGqHUroe3Gx8VGqNB9FZB2OUcHhpqzA/view?usp=sharing). For full details, see the [documentation PDF](https://drive.google.com/file/d/1uOtZxP5OJ1emqVB7kcE5OEBsxe1KInuJ/view?usp=sharing).
