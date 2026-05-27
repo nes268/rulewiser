@@ -1,4 +1,14 @@
-# RuleWiser
+# RuleWiser — Proactive Moderation Guidance
+
+One post-check can save dozens of removals.
+
+![Platform: Devvit Web](https://img.shields.io/badge/platform-Devvit%20Web-5b8cff)
+![Language: TypeScript](https://img.shields.io/badge/language-TypeScript-3178c6)
+![UI: React 19](https://img.shields.io/badge/ui-React%2019-61dafb)
+![Styling: Tailwind CSS](https://img.shields.io/badge/styling-Tailwind%20CSS-38bdf8)
+![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-2ea44f)
+[![Live app](https://img.shields.io/badge/live-app-orange)](https://developers.reddit.com/apps/rulewiserr)
+[![Subreddit](https://img.shields.io/badge/subreddit-r%2FTestRuleWiser-black)](https://www.reddit.com/r/TestRuleWiser/)
 
 ### Intelligent pre-submission analysis for Reddit communities
 
@@ -6,13 +16,35 @@ RuleWiser is a Devvit Web app that helps Reddit users understand subreddit rules
 before they post, while giving moderators a live view of recurring rule issues,
 duplicate patterns, and community health.
 
+Devvit Web · TypeScript · Reddit Moderation Tools · BSD-3-Clause
+
+## Project Snapshot
+
+- **What it is:** A Devvit-native moderation assistant for proactive post checks
+- **Who it helps:** Reddit users before posting and moderators after posting
+- **Core outcome:** Fewer accidental removals, faster moderation decisions
+- **App:** [RuleWiser on Reddit Developers](https://developers.reddit.com/apps/rulewiserr)
+
 ## Links
 
-| Resource | Description |
-| --- | --- |
-| [Live app](https://developers.reddit.com/apps/rulewiserr) | Install and try RuleWiser on Reddit |
-| [Presentation](https://drive.google.com/file/d/1SDGqHUroe3Gx8VGqNB9FZB2OUcHhpqzA/view?usp=sharing) | Project overview deck (PDF) |
-| [Documentation](https://drive.google.com/file/d/1uOtZxP5OJ1emqVB7kcE5OEBsxe1KInuJ/view?usp=sharing) | Full project documentation (PDF) |
+| Resource                                                                                            | Description                         |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| [Live app](https://developers.reddit.com/apps/rulewiserr)                                           | Install and try RuleWiser on Reddit |
+| [Presentation](https://drive.google.com/file/d/1SDGqHUroe3Gx8VGqNB9FZB2OUcHhpqzA/view?usp=sharing)  | Project overview deck (PDF)         |
+| [Documentation](https://drive.google.com/file/d/1uOtZxP5OJ1emqVB7kcE5OEBsxe1KInuJ/view?usp=sharing) | Full project documentation (PDF)    |
+
+---
+
+## What Is RuleWiser?
+
+Moderators often spend time checking the same problems repeatedly: unclear titles,
+rule mismatches, repeated topics, and spam-like phrasing.
+
+RuleWiser turns that into a guided workflow:
+
+- Users get feedback before they submit
+- Submitted posts are checked automatically
+- Mods see clear signal trends in one dashboard
 
 ---
 
@@ -25,6 +57,20 @@ community’s posting expectations.
 RuleWiser moves moderation earlier in the workflow. Instead of only reacting
 after a bad post appears, it gives users practical feedback before submission and
 gives moderators analytics after submission.
+
+---
+
+## Feature Overview
+
+| Feature                           | What it does                                                 |
+| --------------------------------- | ------------------------------------------------------------ |
+| Pre-Check Assistant               | Reviews draft title/body before posting                      |
+| Post-Submit Guardian              | Analyzes submitted posts and comments with clear guidance    |
+| Rule-Aware Signals                | Matches draft content against subreddit rule context         |
+| Title Rewriter                    | Suggests stronger title alternatives from user draft context |
+| Duplicate-Risk Detection          | Flags likely repeated topics from recent post patterns       |
+| Moderator Signal Dashboard        | Shows health status, top signals, and recent flagged posts   |
+| Re-Analyze + False Positive Tools | Lets moderators review and refine decisions quickly          |
 
 ---
 
